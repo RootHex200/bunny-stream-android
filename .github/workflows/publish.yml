@@ -6,7 +6,7 @@ on:
   # Only trigger on SemVer tags prefixed with 'v', e.g. 'v1.2.3'
   push:
     tags:
-      - 'v*.*.*'
+      - '*.*.*'
   # Allow manual (button) dispatch from the Actions tab
   workflow_dispatch:
 
