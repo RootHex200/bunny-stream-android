@@ -72,3 +72,30 @@ subprojects {
         }
     }
 }
+
+// ---- Version resolution (env first, then gradle props) ----
+val releaseVersion: String = providers
+    .environmentVariable("VERSION")
+    .orElse(providers.gradleProperty("releaseVersion"))
+    .orElse(providers.gradleProperty("version"))
+    .map { it.trim() }
+    .getOrElse("")
+
+require(releaseVersion.isNotEmpty()) {
+    "Project version is empty. Provide VERSION env var (preferred from Git tag) or -PreleaseVersion/-Pversion."
+}
+
+allprojects {
+    group = "net.bunnystream"
+    version = releaseVersion
+}
+
+tasks.register("printAllGroups") {
+    group = "help"
+    description = "Prints each subproject's default group"
+    doLast {
+        rootProject.allprojects.forEach { p ->
+            println("→ ${p.path}: group='${p.group}'")
+        }
+    }
+}
