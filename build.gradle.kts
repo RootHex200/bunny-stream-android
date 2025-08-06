@@ -73,21 +73,31 @@ subprojects {
     }
 }
 
-// ---- Version resolution (env first, then gradle props) ----
-val releaseVersion: String = providers
+// Resolve version from env/props (no failure by default)
+val resolvedVersionProvider = providers
     .environmentVariable("VERSION")
     .orElse(providers.gradleProperty("releaseVersion"))
     .orElse(providers.gradleProperty("version"))
     .map { it.trim() }
-    .getOrElse("")
+val resolvedVersion = resolvedVersionProvider.orNull
 
-require(releaseVersion.isNotEmpty()) {
-    "Project version is empty. Provide VERSION env var (preferred from Git tag) or -PreleaseVersion/-Pversion."
+// Only enforce in CI when explicitly requested
+val enforceReleaseVersion = providers
+    .gradleProperty("enforceVersion")                 // -PenforceVersion=true
+    .orElse(providers.environmentVariable("ENFORCE_VERSION"))
+    .map { it.equals("true", ignoreCase = true) }
+    .orElse(false)
+    .get()
+
+if (enforceReleaseVersion) {
+    require(!resolvedVersion.isNullOrBlank()) {
+        "Project version is empty. Provide VERSION env var (from tag) or -PreleaseVersion/-Pversion."
+    }
 }
 
 allprojects {
     group = "net.bunnystream"
-    version = releaseVersion
+    version = resolvedVersion ?: "1.0.0-SNAPSHOT"     // safe default for tests/other jobs
 }
 
 tasks.register("printAllGroups") {
