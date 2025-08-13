@@ -13,6 +13,8 @@ import net.bunny.api.upload.DefaultVideoUploader
 import net.bunny.api.upload.service.basic.BasicUploaderService
 import net.bunny.api.upload.service.tus.TusUploaderService
 import org.openapitools.client.infrastructure.ApiClient
+import okhttp3.Interceptor
+import okhttp3.OkHttpClient
 
 class BunnyStreamApi private constructor(
     context: Context,
@@ -60,7 +62,25 @@ class BunnyStreamApi private constructor(
 
     override val collectionsApi = ManageCollectionsApi(baseApi)
 
-    override val videosApi = ManageVideosApi(baseApi)
+    // OkHttp client that injects Referer for the /play endpoint
+    private val okHttpClientWithReferer: OkHttpClient = ApiClient.defaultClient
+        .newBuilder()
+        .addInterceptor(Interceptor { chain ->
+            val originalRequest = chain.request()
+            val path = originalRequest.url.encodedPath
+
+            val isPlayEndpoint = path.endsWith("/play")
+            val requestBuilder = originalRequest.newBuilder()
+
+            if (isPlayEndpoint) {
+                requestBuilder.header("Referer", "https://iframe.mediadelivery.net/")
+            }
+
+            chain.proceed(requestBuilder.build())
+        })
+        .build()
+
+    override val videosApi = ManageVideosApi(baseApi, okHttpClientWithReferer)
 
     private val prefs = context.getSharedPreferences(TUS_PREFS_FILE, Context.MODE_PRIVATE)
 
