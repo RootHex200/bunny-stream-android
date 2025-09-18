@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/tv_controls_background"
+    android:focusable="false"
+    android:focusableInTouchMode="false">
+
+    <!-- Video Title -->
+    <TextView
+        android:id="@+id/tv_video_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:layout_marginHorizontal="48dp"
+        android:textColor="@android:color/white"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:shadowColor="@android:color/black"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="3"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:text="Sample Video Title" />
+
+    <!-- Main Control Buttons -->
+    <LinearLayout
+        android:id="@+id/tv_controls_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:visibility="visible"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <ImageButton
+            android:id="@+id/tv_seek_back"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_margin="12dp"
+            android:background="@drawable/tv_control_button"
+            android:src="@drawable/ic_replay_10s_24dp"
+            android:scaleType="centerInside"
+            android:focusable="true"
+            android:padding="16dp"
+            android:contentDescription="@string/tv_seek_back"
+            android:nextFocusRight="@+id/tv_play_pause" />
+
+        <ImageButton
+            android:id="@+id/tv_play_pause"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_margin="20dp"
+            android:background="@drawable/tv_play_button"
+            android:src="@drawable/ic_play_48dp"
+            android:scaleType="centerInside"
+            android:focusable="true"
+            android:padding="20dp"
+            android:contentDescription="@string/tv_play"
+            android:nextFocusLeft="@+id/tv_seek_back"
+            android:nextFocusRight="@+id/tv_seek_forward" />
+
+        <ImageButton
+            android:id="@+id/tv_seek_forward"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_margin="12dp"
+            android:background="@drawable/tv_control_button"
+            android:src="@drawable/ic_forward_10s_24dp"
+            android:scaleType="centerInside"
+            android:focusable="true"
+            android:padding="16dp"
+            android:contentDescription="@string/tv_seek_forward"
+            android:nextFocusLeft="@+id/tv_play_pause"
+            android:nextFocusRight="@+id/tv_settings" />
+
+        <ImageButton
+            android:id="@+id/tv_settings"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_margin="12dp"
+            android:background="@drawable/tv_control_button"
+            android:src="@drawable/ic_settings_24dp"
+            android:scaleType="centerInside"
+            android:focusable="true"
+            android:padding="16dp"
+            android:contentDescription="@string/tv_settings"
+            android:nextFocusLeft="@+id/tv_seek_forward" />
+
+    </LinearLayout>
+
+
+    <!-- Progress Bar -->
+    <ProgressBar
+        android:id="@+id/tv_progress"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="0dp"
+        android:layout_height="6dp"
+        android:layout_marginHorizontal="48dp"
+        android:layout_marginBottom="80dp"
+        android:progressTint="#FF4CAF50"
+        android:progressBackgroundTint="#33FFFFFF"
+        android:secondaryProgressTint="#66FFFFFF"
+        android:max="100"
+        android:visibility="visible"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:progress="30" />
+
+    <!-- Time Display -->
+    <TextView
+        android:id="@+id/tv_time_display"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:layout_marginBottom="12dp"
+        android:background="#80000000"
+        android:padding="8dp"
+        android:minWidth="120dp"
+        android:gravity="center"
+        android:shadowColor="@android:color/black"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="2"
+        android:visibility="visible"
+        app:layout_constraintBottom_toTopOf="@id/tv_progress"
+        app:layout_constraintStart_toStartOf="@id/tv_progress"
+        tools:text="05:24 / 15:30" />
+
+    <!-- Loading Indicator -->
+    <ProgressBar
+        android:id="@+id/tv_loading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:visibility="visible" />
+
+    <!-- Loading Text -->
+    <TextView
+        android:id="@+id/tv_loading_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Loading video..."
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        android:background="#80000000"
+        android:padding="12dp"
+        android:shadowColor="@android:color/black"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="2"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/tv_loading"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:visibility="visible" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

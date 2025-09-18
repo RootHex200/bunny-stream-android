@@ -2,6 +2,7 @@ package net.bunny.bunnystreamplayer
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.Uri
 import android.util.Log
@@ -64,7 +65,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
 @SuppressLint("UnsafeOptInUsageError")
-class DefaultBunnyPlayer private constructor(private val context: Context) : BunnyPlayer {
+class DefaultBunnyPlayer private constructor(private val appContext: Context) : BunnyPlayer {
 
     companion object {
         private const val TAG = "DefaultBunnyPlayer"
@@ -79,7 +80,13 @@ class DefaultBunnyPlayer private constructor(private val context: Context) : Bun
             instance ?: synchronized(this) {
                 instance ?: DefaultBunnyPlayer(context.applicationContext).also { instance = it }
             }
+        fun isRunningOnTV(context: Context): Boolean {
+            return context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+        }
     }
+
+    // Override the context property from BunnyPlayer interface
+    override val context: Context get() = this.appContext
 
     // Speed Variables
     private var speedConfig = PlaybackSpeedConfig()
@@ -92,7 +99,6 @@ class DefaultBunnyPlayer private constructor(private val context: Context) : Bun
     private var progressSaveJob: Job? = null
 
     private var localPlayer: Player? = null
-    private val castContext = AppCastContext.get()
     private var castPlayer: Player? = null
     override var currentPlayer: Player? = null
 
@@ -222,29 +228,40 @@ class DefaultBunnyPlayer private constructor(private val context: Context) : Bun
     override var playerSettings: PlayerSettings? = null
 
     init {
-        castPlayer = CastPlayer(castContext).also {
-            it.addListener(playerListener)
-            it.setSessionAvailabilityListener(object : SessionAvailabilityListener {
-                override fun onCastSessionAvailable() {
-                    Log.d(TAG, "onCastSessionAvailable")
-                    switchCurrentPlayer(it)
+        // Only initialize Cast if it's available
+        if (AppCastContext.isAvailable()) {
+            try {
+                castPlayer = CastPlayer(AppCastContext.get()).also {
+                    it.addListener(playerListener)
+                    it.setSessionAvailabilityListener(object : SessionAvailabilityListener {
+                        override fun onCastSessionAvailable() {
+                            Log.d(TAG, "onCastSessionAvailable")
+                            switchCurrentPlayer(it)
+                        }
+
+                        override fun onCastSessionUnavailable() {
+                            Log.d(TAG, "onCastSessionUnavailable")
+                            switchCurrentPlayer(localPlayer!!)
+                        }
+                    })
                 }
 
-                override fun onCastSessionUnavailable() {
-                    Log.d(TAG, "onCastSessionUnavailable")
-                    switchCurrentPlayer(localPlayer!!)
+                AppCastContext.get().addCastStateListener {
+                    Log.d(TAG, "onCastStateChanged: $it")
+                    when(it) {
+                        CastState.CONNECTED -> {}
+                        CastState.CONNECTING -> {}
+                        CastState.NOT_CONNECTED -> {}
+                        CastState.NO_DEVICES_AVAILABLE -> {}
+                    }
                 }
-            })
-        }
-
-        castContext.addCastStateListener {
-            Log.d(TAG, "onCastStateChanged: $it")
-            when(it) {
-                CastState.CONNECTED -> {}
-                CastState.CONNECTING -> {}
-                CastState.NOT_CONNECTED -> {}
-                CastState.NO_DEVICES_AVAILABLE -> {}
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to initialize Cast player: ${e.message}")
+                castPlayer = null
             }
+        } else {
+            Log.d(TAG, "Cast framework not available, continuing without Cast support")
+            castPlayer = null
         }
     }
 
@@ -325,11 +342,14 @@ class DefaultBunnyPlayer private constructor(private val context: Context) : Bun
     private fun startAutoSavePosition(interval: Long = autoSaveInterval) {
         stopAutoSavePosition()
 
-        autoSaveJob = coroutineScope.launch {
+        autoSaveJob = coroutineScope.launch(Dispatchers.Main) { // <- Use Main dispatcher
             while (isActive) {
                 delay(interval)
-                if (isPlaying()) {
-                    saveCurrentPosition()
+                if (isPlaying()) { // Now safely on main thread
+                    // Move save operation to background
+                    launch(Dispatchers.IO) {
+                        saveCurrentPosition()
+                    }
                 }
             }
         }
@@ -356,25 +376,36 @@ class DefaultBunnyPlayer private constructor(private val context: Context) : Bun
         currentVideoId?.let { videoId ->
             positionManager?.let { manager ->
                 coroutineScope.launch {
-                    val position = getCurrentPosition()
-                    val duration = getDuration()
-                    if (position > 0 && duration > 0) {
-                        manager.savePosition(videoId, position, duration)
-                        val savedPosition = PlaybackPosition(
-                            videoId = videoId,
-                            position = position,
-                            duration = duration,
-                            timestamp = System.currentTimeMillis(),
-                            watchPercentage = position.toFloat() / duration.toFloat()
-                        )
-                        resumePositionListener?.onResumePositionSaved(videoId, savedPosition)
+                    // Get position on main thread
+                    val position = withContext(Dispatchers.Main) {
+                        getCurrentPosition()
+                    }
+                    val duration = withContext(Dispatchers.Main) {
+                        getDuration()
+                    }
+
+                    // Save on background thread
+                    withContext(Dispatchers.IO) {
+                        if (position > 0 && duration > 0) {
+                            manager.savePosition(videoId, position, duration)
+                            val savedPosition = PlaybackPosition(
+                                videoId = videoId,
+                                position = position,
+                                duration = duration,
+                                timestamp = System.currentTimeMillis(),
+                                watchPercentage = position.toFloat() / duration.toFloat()
+                            )
+
+                            // Notify listener on main thread
+                            withContext(Dispatchers.Main) {
+                                resumePositionListener?.onResumePositionSaved(videoId, savedPosition)
+                            }
+                        }
                     }
                 }
             }
         }
     }
-
-
 
     // Add configuration method
     override fun setPlaybackSpeedConfig(config: PlaybackSpeedConfig) {
@@ -604,12 +635,18 @@ class DefaultBunnyPlayer private constructor(private val context: Context) : Bun
     override fun saveCurrentProgress() {
         currentVideoId?.let { videoId ->
             currentLibraryId?.let { libraryId ->
-                val position = getCurrentPosition()
-                if (position > 0) {
-                    // Save progress in background
-                    GlobalScope.launch {
-                        BunnyStreamApi.getInstance().progressRepository
-                            .saveProgress(libraryId, videoId, position)
+                coroutineScope.launch {
+                    // Get position on main thread
+                    val position = withContext(Dispatchers.Main) {
+                        getCurrentPosition()
+                    }
+
+                    if (position > 0) {
+                        // Save progress in background
+                        withContext(Dispatchers.IO) {
+                            BunnyStreamApi.getInstance().progressRepository
+                                .saveProgress(libraryId, videoId, position)
+                        }
                     }
                 }
             }
@@ -629,11 +666,14 @@ class DefaultBunnyPlayer private constructor(private val context: Context) : Bun
 
     private fun startProgressSaving(intervalMs: Long) {
         progressSaveJob?.cancel()
-        progressSaveJob = GlobalScope.launch {
+        progressSaveJob = GlobalScope.launch(Dispatchers.Main) { // <- Use Main dispatcher
             while (isActive) {
                 delay(intervalMs)
-                if (isPlaying()) {
-                    saveCurrentProgress()
+                if (isPlaying()) { // Now safely on main thread
+                    // Move save operation to background
+                    launch(Dispatchers.IO) {
+                        saveCurrentProgress()
+                    }
                 }
             }
         }
@@ -801,9 +841,23 @@ class DefaultBunnyPlayer private constructor(private val context: Context) : Bun
             startAutoSavePosition()
         }
     }
+
     override fun pause(autoPaused: Boolean) {
         this.autoPaused = autoPaused
-        saveCurrentPosition()
+
+        // Save position on background thread, but get current position on main thread
+        coroutineScope.launch {
+            val position = getCurrentPosition() // Already on main thread
+            val duration = getDuration() // Already on main thread
+
+            // Save on background thread
+            launch(Dispatchers.IO) {
+                currentVideoId?.let { videoId ->
+                    positionManager?.savePosition(videoId, position, duration)
+                }
+            }
+        }
+
         stopAutoSavePosition()
         currentPlayer?.pause()
     }
@@ -893,7 +947,7 @@ class DefaultBunnyPlayer private constructor(private val context: Context) : Bun
     private fun getAvailableVideoQualityOptions(): VideoQualityOptions? {
         val trackGroups = currentPlayer?.currentTracks?.groups ?: return null
 
-        val options = mutableListOf<VideoQuality>()
+        val options = mutableSetOf<VideoQuality>() // Use Set to avoid duplicates
 
         trackGroups.forEach {
             for (trackIndex in 0 until it.length) {
@@ -909,8 +963,8 @@ class DefaultBunnyPlayer private constructor(private val context: Context) : Bun
         // Default option (resolution selected automatically by player)
         var selectedOption = VideoQuality(Int.MAX_VALUE, Int.MAX_VALUE)
 
-        options.sortByDescending { it.width + it.height }
-        options.add(0, selectedOption)
+        val optionsList = options.sortedByDescending { it.width + it.height }.toMutableList()
+        optionsList.add(0, selectedOption)
 
         trackSelector?.parameters?.let {
             if (it.maxVideoWidth != Int.MAX_VALUE && it.maxVideoHeight != Int.MAX_VALUE) {
@@ -918,7 +972,7 @@ class DefaultBunnyPlayer private constructor(private val context: Context) : Bun
             }
         }
 
-        return VideoQualityOptions(options, selectedOption)
+        return VideoQualityOptions(optionsList, selectedOption)
     }
 
     private fun getAvailableAudioTrackOptions(): AudioTrackInfoOptions? {
