@@ -28,6 +28,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,7 +66,7 @@ fun NavGraphBuilder.tvHomeScreen(
     navigateToVideoList: () -> Unit,
     navigateToUpload: () -> Unit,
     navigateToStreaming: () -> Unit,
-    navigateToTVPlayer: (String, Long) -> Unit,
+    navigateToTVPlayer: (String, Long, String?, Long?) -> Unit,
     navigateToResumeSettings: () -> Unit,
     navigateToResumeManagement: () -> Unit,
     modifier: Modifier = Modifier,
@@ -92,7 +97,7 @@ fun TVHomeScreenRoute(
     navigateToVideoList: () -> Unit,
     navigateToUpload: () -> Unit,
     navigateToStreaming: () -> Unit,
-    navigateToTVPlayer: (String, Long) -> Unit,
+    navigateToTVPlayer: (String, Long, String?, Long?) -> Unit,
     navigateToResumeSettings: () -> Unit,
     navigateToResumeManagement: () -> Unit,
     modifier: Modifier = Modifier,
@@ -144,9 +149,9 @@ fun TVHomeScreenRoute(
         showDirectPlayDialog = showDirectPlayDialog,
         menuItems = menuItems,
         onDirectPlayDismiss = { showDirectPlayDialog = false },
-        onDirectPlay = { videoId, libraryId ->
+        onDirectPlay = { videoId, libraryId, token, expires ->
             showDirectPlayDialog = false
-            navigateToTVPlayer(videoId, libraryId.toLong())
+            navigateToTVPlayer(videoId, libraryId.toLong(), token, expires)
         }
     )
 }
@@ -157,7 +162,7 @@ private fun TVHomeScreenContent(
     showDirectPlayDialog: Boolean,
     menuItems: List<TVMenuItem>,
     onDirectPlayDismiss: () -> Unit,
-    onDirectPlay: (String, String) -> Unit
+    onDirectPlay: (String, String, String?, Long?) -> Unit
 ) {
     Box(
         modifier = modifier
@@ -415,11 +420,14 @@ private fun TVMenuItemCard(item: TVMenuItem) {
 
 @Composable
 private fun TVDirectPlayDialog(
-    onPlay: (String, String) -> Unit,
+    onPlay: (String, String, String?, Long?) -> Unit,
     onDismiss: () -> Unit
 ) {
     var videoId by remember { mutableStateOf("") }
     var libraryId by remember { mutableStateOf("") }
+    var token by remember { mutableStateOf("") }
+    var expires by remember { mutableStateOf("") }
+    var useTokenAuth by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -454,11 +462,49 @@ private fun TVDirectPlayDialog(
                     label = { Text("Library ID") },
                     modifier = Modifier.fillMaxWidth()
                 )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Checkbox(
+                        checked = useTokenAuth,
+                        onCheckedChange = { useTokenAuth = it }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Use Token Authentication",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                
+                if (useTokenAuth) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = token,
+                        onValueChange = { token = it },
+                        label = { Text("Token") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = expires,
+                        onValueChange = { expires = it },
+                        label = { Text("Expires (Unix timestamp)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onPlay(videoId, libraryId) },
+                onClick = { 
+                    val tokenValue = if (useTokenAuth && token.isNotBlank()) token else null
+                    val expiresValue = if (useTokenAuth && expires.isNotBlank()) expires.toLongOrNull() else null
+                    onPlay(videoId, libraryId, tokenValue, expiresValue)
+                },
                 enabled = videoId.isNotEmpty() && libraryId.isNotEmpty()
             ) {
                 Text("Play")
@@ -485,7 +531,7 @@ fun TVHomeScreenPreview() {
                 TVMenuItem("Settings", "Configure app", Icons.Default.Settings) {}
             ),
             onDirectPlayDismiss = {},
-            onDirectPlay = { _, _ -> }
+            onDirectPlay = { _, _, _, _ -> }
         )
     }
 }

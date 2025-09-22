@@ -66,6 +66,8 @@ fun PlayerRoute(
     appState: AppState,
     videoId: String,
     libraryId: Long?,
+    token: String? = null,
+    expires: Long? = null,
     modifier: Modifier = Modifier,
     viewModel: PlayerViewModel = viewModel(),
 ) {
@@ -75,11 +77,19 @@ fun PlayerRoute(
         modifier = modifier,
         videoId = videoId,
         libraryId = libraryId,
+        token = token,
+        expires = expires,
         uiState,
         onBackClicked = { appState.navController.popBackStack() },
     )
 
-    LaunchedEffect(key1 = "load", block = { viewModel.loadVideo(videoId, libraryId) })
+    LaunchedEffect(key1 = "load", block = { 
+        if (token != null && expires != null) {
+            viewModel.loadVideoWithToken(videoId, libraryId, token, expires)
+        } else {
+            viewModel.loadVideo(videoId, libraryId)
+        }
+    })
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,6 +98,8 @@ fun PlayerScreen(
     modifier: Modifier = Modifier,
     videoId: String,
     libraryId: Long?,
+    token: String? = null,
+    expires: Long? = null,
     uiState: VideoUiState,
     onBackClicked: () -> Unit,
 ) {
@@ -130,6 +142,8 @@ fun PlayerScreen(
             BunnyPlayerComposable(
                 videoId = videoId,
                 libraryId = libraryId,
+                token = token,
+                expires = expires,
                 resumePosition = when (uiState) {
                     is VideoUiState.VideoUiLoaded -> uiState.resumePosition
                     else -> 0L
@@ -379,6 +393,8 @@ private fun SpeedButtonRow(
 fun BunnyPlayerComposable(
     videoId: String,
     libraryId: Long?,
+    token: String? = null,
+    expires: Long? = null,
     resumePosition: Long = 0L,
     onPlayerReady: (BunnyStreamPlayer) -> Unit = {},
     onResumePosition: ((PlaybackPosition, (Boolean) -> Unit) -> Unit)? = null,
@@ -429,7 +445,11 @@ fun BunnyPlayerComposable(
                 player
             },
             update = {
-                it.playVideo(videoId, libraryId, videoTitle = "")
+                if (token != null && expires != null) {
+                    it.playVideoWithToken(videoId, libraryId, videoTitle = "", token, expires)
+                } else {
+                    it.playVideo(videoId, libraryId, videoTitle = "")
+                }
                 onPlayerReady(it)
             },
             modifier = modifier.background(Color.Gray)

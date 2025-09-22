@@ -129,7 +129,7 @@ class MainActivity : AppCompatActivity() {
                 navigateToSettings = navController::navigateToSettings,
                 navigateToVideoList = navController::navigateToLibrary,
                 navigateToUpload = { navController.navigateToLibrary(showUpload = true) },
-                navigateToTVPlayer = { videoId, libraryId ->
+                navigateToTVPlayer = { videoId, libraryId,token,expire ->
                     // Use TV player directly
                     BunnyTVPlayerActivity.start(
                         context = context,

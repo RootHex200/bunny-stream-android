@@ -26,7 +26,7 @@ fun NavGraphBuilder.homeScreen(
      navigateToResumeSettings: () -> Unit,
     navigateToResumeManagement: () -> Unit,
     modifier: Modifier = Modifier,
-    navigateToPlayer: (String, Long) -> Unit,
+    navigateToPlayer:  (String, Long, String?, Long?) -> Unit,
 ) {
     composable(
         route = HOME_ROUTE,

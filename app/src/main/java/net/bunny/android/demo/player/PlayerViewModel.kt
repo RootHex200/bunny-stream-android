@@ -81,6 +81,46 @@ class PlayerViewModel : ViewModel() {
 
     }
 
+    fun loadVideoWithToken(videoId: String, libraryId: Long?, token: String, expires: Long) {
+        Log.d(TAG, "loadVideoWithToken videoId=$videoId, token=$token, expires=$expires")
+
+        val providedLibraryId = libraryId ?: BunnyStreamApi.libraryId
+
+        if (libraryId == -1L || !BunnyStreamApi.isInitialized()) {
+            return
+        }
+
+        mutableUiState.value = VideoUiState.VideoUiLoading
+
+        scope.launch {
+            try {
+                val response =
+                    BunnyStreamApi.getInstance().videosApi.videoGetVideoPlayData(
+                        providedLibraryId,
+                        videoId,
+                        token = token,
+                        expires = expires
+                    ).video?.toVideoModel()!!
+                // Load saved progress
+                val progressResult = BunnyStreamApi.getInstance().progressRepository
+                    .getProgress(providedLibraryId, videoId)
+
+                val resumePosition = progressResult.fold(
+                    ifLeft = { 0L },
+                    ifRight = { it }
+                )
+
+                val video = response.toVideo()
+                mutableUiState.value = VideoUiState.VideoUiLoaded(video, resumePosition)
+            } catch (e: Exception) {
+                 Log.e(TAG, "Error loading video with token: ${e.message}")
+                e.printStackTrace()
+                mutableErrorState.emit(Error("Error loading video with token: ${e.message}"))
+                mutableUiState.value = VideoUiState.VideoUiEmpty
+            }
+        }
+    }
+
     fun onErrorDismissed() = viewModelScope.launch {
         mutableErrorState.emit(null)
     }

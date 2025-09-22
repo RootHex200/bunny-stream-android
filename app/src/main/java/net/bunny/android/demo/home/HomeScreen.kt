@@ -2,18 +2,22 @@ package net.bunny.android.demo.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -85,7 +90,7 @@ fun HomeScreenRoute(
     navigateToVideoList: () -> Unit,
     navigateToUpload: () -> Unit,
     navigateToStreaming: () -> Unit,
-    navigateToPlayer: (String, Long) -> Unit,
+    navigateToPlayer: (String, Long, String?, Long?) -> Unit,
     navigateToResumeSettings: () -> Unit,
     navigateToResumeManagement: () -> Unit,
     modifier: Modifier = Modifier,
@@ -125,9 +130,9 @@ fun HomeScreenRoute(
                 }
             }
         },
-        onPlayDirect = { videoId, libraryId ->
+        onPlayDirect = { videoId, libraryId, token, expires ->
             showDialog = false
-            navigateToPlayer(videoId, libraryId.toLong())
+            navigateToPlayer(videoId, libraryId.toLong(), token, expires)
         },
         onDismiss = {
             showDialog = false
@@ -141,7 +146,7 @@ fun HomeScreenContent(
     modifier: Modifier,
     showDialog: Boolean = false,
     onOptionClick: (HomeOption) -> Unit,
-    onPlayDirect: (String, String) -> Unit,
+    onPlayDirect: (String, String, String?, Long?) -> Unit,
     onDismiss: () -> Unit
 ) {
     Scaffold(
@@ -167,8 +172,8 @@ fun HomeScreenContent(
         if (showDialog) {
             EnterVideoIdDialog(
                 initialValue = "",
-                onPlay = { videoId, libraryId ->
-                    onPlayDirect(videoId, libraryId)     // fire the navigation/callback
+                onPlay = { videoId, libraryId,token,expire ->
+                    onPlayDirect(videoId, libraryId,token,expire)     // fire the navigation/callback
                 },
                 onDismiss = {
                     onDismiss()
@@ -287,17 +292,20 @@ fun OptionsCategory(title: String) {
 @Composable
 private fun EnterVideoIdDialog(
     initialValue: String = "",
-    onPlay: (String, String) -> Unit,
+    onPlay: (String, String, String?, Long?) -> Unit,
     onDismiss: () -> Unit
 ) {
     var videoId by remember { mutableStateOf(initialValue) }
     var libraryId by remember { mutableStateOf(initialValue) }
+    var token by remember { mutableStateOf("") }
+    var expires by remember { mutableStateOf("") }
+    var useTokenAuth by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Enter Video ID",
+                text = "Enter Video Details",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -305,37 +313,72 @@ private fun EnterVideoIdDialog(
         text = {
             Column {
                 Text(
-                    text = "Please enter the ID of the video you want to play",
+                    text = "Please enter the details of the video you want to play",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                
                 TextField(
                     value = videoId,
                     onValueChange = { videoId = it },
-                    placeholder = { Text("Video ID") },
+                    label = { Text("Video ID") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Please enter the Library ID of the video you want to play",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+                
                 TextField(
                     value = libraryId,
                     onValueChange = { libraryId = it },
-                    placeholder = { Text("Video Library ID") },
+                    label = { Text("Library ID") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Checkbox(
+                        checked = useTokenAuth,
+                        onCheckedChange = { useTokenAuth = it }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Use Token Authentication",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                
+                if (useTokenAuth) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextField(
+                        value = token,
+                        onValueChange = { token = it },
+                        label = { Text("Token") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextField(
+                        value = expires,
+                        onValueChange = { expires = it },
+                        label = { Text("Expires (Unix timestamp)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onPlay(videoId, libraryId) }
+                onClick = { 
+                    val tokenValue = if (useTokenAuth && token.isNotBlank()) token else null
+                    val expiresValue = if (useTokenAuth && expires.isNotBlank()) expires.toLongOrNull() else null
+                    onPlay(videoId, libraryId, tokenValue, expiresValue)
+                }
             ) {
                 Text("Play", color = MaterialTheme.colorScheme.primary)
             }
@@ -358,7 +401,7 @@ fun OptionsScreenPreview() {
         HomeScreenContent(
             modifier = Modifier.fillMaxSize(),
             onOptionClick = {},
-            onPlayDirect = { videoId, libraryId ->
+            onPlayDirect = { videoId, libraryId,token,expire ->
             },
             onDismiss = { },
         )

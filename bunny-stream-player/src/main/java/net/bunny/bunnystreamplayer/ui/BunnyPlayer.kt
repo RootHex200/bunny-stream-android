@@ -17,6 +17,17 @@ interface BunnyPlayer {
     fun playVideo(videoId: String, libraryId: Long?, videoTitle: String)
 
     /**
+     * Plays a video with token-based authentication
+     *
+     * @param videoId Video ID
+     * @param libraryId Library ID
+     * @param videoTitle Video title
+     * @param token Authentication token
+     * @param expires Token expiration timestamp
+     */
+    fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?)
+
+    /**
      * Pauses video
      */
     fun pause()

@@ -43,7 +43,9 @@ fun AppNavHost(
             navigateToSettings = navController::navigateToSettings,
             navigateToVideoList = navController::navigateToLibrary,
             navigateToUpload = { navController.navigateToLibrary(showUpload = true) },
-            navigateToPlayer = navController::navigateToPlayer,
+            navigateToPlayer = { videoId, libraryId, token, expires -> 
+                navController.navigateToPlayer(videoId, libraryId, null, token, expires)
+            },
             navigateToStreaming = {
                 context.startActivity(Intent(context, RecordingActivity::class.java))
             },
@@ -54,7 +56,7 @@ fun AppNavHost(
         libraryScreen(
             appState = appState,
             navigateToSettings = navController::navigateToSettings,
-            navigateToPlayer = { navController.navigateToPlayer(it, null) },
+            navigateToPlayer = { videoId -> navController.navigateToPlayer(videoId, null) },
         )
         settingsScreen(appState = appState)
         playerScreen(appState = appState)
@@ -72,7 +74,7 @@ fun NavGraphBuilder.tvHomeScreen(
     navigateToVideoList: () -> Unit,
     navigateToUpload: () -> Unit,
     navigateToStreaming: () -> Unit,
-    navigateToTVPlayer: (String, Long) -> Unit,
+    navigateToTVPlayer: (String, Long, String?, Long?) -> Unit,
     navigateToResumeSettings: () -> Unit,
     navigateToResumeManagement: () -> Unit,
     modifier: Modifier = Modifier,

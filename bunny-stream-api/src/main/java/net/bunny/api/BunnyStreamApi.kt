@@ -129,4 +129,8 @@ class BunnyStreamApi private constructor(
     override suspend fun fetchPlayerSettings(libraryId: Long, videoId: String): Either<String, PlayerSettings> {
         return settingsRepository.fetchSettings(libraryId, videoId)
     }
+
+    override suspend fun fetchPlayerSettingsWithToken(libraryId: Long, videoId: String, token: String?, expires: Long?): Either<String, PlayerSettings> {
+        return settingsRepository.fetchSettingsWithToken(libraryId, videoId, token, expires)
+    }
 }

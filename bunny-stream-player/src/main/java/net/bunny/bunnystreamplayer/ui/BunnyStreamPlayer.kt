@@ -367,6 +367,96 @@ class BunnyStreamPlayer @JvmOverloads constructor(
         pendingJob = null
     }
 
+    override fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?) {
+        Log.d(TAG, "playVideoWithToken videoId=$videoId, token=$token, expires=$expires")
+
+        currentVideoId = videoId
+        currentLibraryId = libraryId
+        val providedLibraryId = libraryId ?: BunnyStreamApi.libraryId
+
+        if (!BunnyStreamApi.isInitialized()) {
+            Log.e(
+                TAG,
+                "Unable to play video, initialize the player first using BunnyStreamSdk.initialize"
+            )
+            return
+        }
+
+        // Save previous video position before switching
+        saveCurrentPosition()
+
+        loadVideoJob?.cancel()
+
+        pendingJob = {
+            scope!!.launch {
+
+                val video: VideoModel
+
+                try {
+                    video = withContext(Dispatchers.IO) {
+                        BunnyStreamApi.getInstance().videosApi.videoGetVideoPlayData(
+                            providedLibraryId,
+                            videoId,
+                            token = token,
+                            expires = expires
+                        ).video?.toVideoModel()!!
+                    }
+                    Log.d(TAG, "video=$video")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error fetching video: $e")
+                    return@launch
+                }
+
+                val settings = BunnyStreamApi.getInstance()
+                    .fetchPlayerSettingsWithToken(providedLibraryId, videoId, token, expires)
+
+                settings.fold(
+                    ifLeft = {
+                        initializeVideo(
+                            video, PlayerSettings(
+                                thumbnailUrl = "",
+                                controls = "",
+                                keyColor = 0,
+                                captionsFontSize = 0,
+                                captionsFontColor = null,
+                                captionsBackgroundColor = null,
+                                uiLanguage = "",
+                                showHeatmap = false,
+                                fontFamily = "",
+                                playbackSpeeds = listOf(
+                                    0.25f,
+                                    0.5f,
+                                    0.75f,
+                                    1.0f,
+                                    1.25f,
+                                    1.5f,
+                                    2.0f,
+                                    3.0f,
+                                    4.0f
+                                ),
+                                drmEnabled = false,
+                                vastTagUrl = null,
+                                videoUrl = "",
+                                seekPath = "",
+                                captionsPath = ""
+                            )
+                        )
+                        playerView.showError(it)
+                    },
+                    ifRight = { initializeVideo(video, it) }
+                )
+            }
+        }
+
+        if (scope == null) {
+            Log.d(TAG, "scope not created yet")
+            return
+        }
+
+        loadVideoJob = pendingJob?.invoke()
+        pendingJob = null
+    }
+
     override fun pause() {
         scope?.launch {
             saveCurrentPosition()
