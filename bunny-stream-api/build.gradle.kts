@@ -15,8 +15,8 @@ publishing {
     publications {
         create<MavenPublication>("release") {
             groupId = "com.github.RootHex200"
-            artifactId = "bunny-stream-android-${project.name}"
-            version = "1.0.0"
+            artifactId = "bunny-stream-api"
+            version = "1.0.1"
 
             afterEvaluate {
                 from(components["release"])
