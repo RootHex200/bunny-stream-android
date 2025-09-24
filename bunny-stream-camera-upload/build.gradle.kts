@@ -3,8 +3,22 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.dokka")
     id("org.jetbrains.kotlin.plugin.compose") version "2.1.20"
+    id("maven-publish")
 }
+// Add publishing configuration
+publishing {
+    publications {
+        create<MavenPublication>("release") {
+            groupId = "com.github.RootHex200"
+            artifactId = "bunny-stream-android-${project.name}"
+            version = "1.0.0"
 
+            afterEvaluate {
+                from(components["release"])
+            }
+        }
+    }
+}
 android {
     namespace = "net.bunny.recording"
     compileSdk = 35

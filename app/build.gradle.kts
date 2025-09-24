@@ -3,8 +3,22 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose") version "2.1.20"
     id("kotlin-parcelize")
+    id("maven-publish")
 }
+// Add publishing configuration
+publishing {
+    publications {
+        create<MavenPublication>("release") {
+            groupId = "com.github.RootHex200"
+            artifactId = "bunny-stream-android-${project.name}"
+            version = "1.0.0"
 
+            afterEvaluate {
+                from(components["release"])
+            }
+        }
+    }
+}
 android {
     namespace = "net.bunny.android.demo"
     compileSdk = 35  // ← Changed from 34 to 35
