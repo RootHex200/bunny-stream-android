@@ -10,6 +10,17 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.1.20"
     id("maven-publish")
 }
+publishing {
+    publications {
+        create<MavenPublication>("release") {
+            groupId = "com.github.RootHex200"
+            artifactId = "bunny-stream-api"
+            afterEvaluate {
+                from(components["release"])
+            }
+        }
+    }
+}
 android {
     buildFeatures {
         buildConfig = true
@@ -48,6 +59,10 @@ android {
             initWith(getByName("debug"))
             buildConfigField("String", "BASE_API", "\"https://video.testfluffle.net\"")
         }
+    }
+
+    publishing {
+        singleVariant("release")
     }
 
     compileOptions {

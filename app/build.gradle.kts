@@ -36,10 +36,6 @@ android {
         getByName("debug") {
 
         }
-
-        create("staging") {
-
-        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

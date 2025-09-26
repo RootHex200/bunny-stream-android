@@ -2,21 +2,6 @@ plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
     id("kotlin-parcelize")
-    id("maven-publish")
-}
-// Add publishing configuration
-publishing {
-    publications {
-        create<MavenPublication>("release") {
-            groupId = "com.github.RootHex200"
-            artifactId = "bunny-stream-android-${project.name}"
-            version = "1.0.0"
-
-            afterEvaluate {
-                from(components["release"])
-            }
-        }
-    }
 }
 android {
     namespace = "net.bunny.tv"

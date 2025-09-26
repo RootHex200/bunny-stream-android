@@ -6,6 +6,17 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.1.20"
     id("maven-publish")
 }
+publishing {
+    publications {
+        create<MavenPublication>("release") {
+            groupId = "com.github.RootHex200"
+            artifactId = "bunny-stream-player"
+            afterEvaluate {
+                from(components["release"])
+            }
+        }
+    }
+}
 android {
     namespace = "net.bunny.player"
     compileSdk = 35
@@ -33,6 +44,9 @@ android {
         create("staging") {
             initWith(getByName("debug"))
         }
+    }
+    publishing {
+        singleVariant("release")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
