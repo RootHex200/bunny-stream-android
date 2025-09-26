@@ -10,19 +10,6 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.1.20"
     id("maven-publish")
 }
-// Add publishing configuration
-publishing {
-    publications {
-        create<MavenPublication>("release") {
-            groupId = "com.github.RootHex200"
-            artifactId = "bunny-stream-api"
-
-            afterEvaluate {
-                from(components["release"])
-            }
-        }
-    }
-}
 android {
     buildFeatures {
         buildConfig = true
