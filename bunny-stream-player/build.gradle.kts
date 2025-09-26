@@ -12,7 +12,6 @@ publishing {
         create<MavenPublication>("release") {
             groupId = "com.github.RootHex200"
             artifactId = "bunny-stream-player"
-            version = "1.0.1"
 
             afterEvaluate {
                 from(components["release"])

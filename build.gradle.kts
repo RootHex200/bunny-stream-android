@@ -22,59 +22,11 @@ plugins {
     // https://kotlin.github.io/dokka
     id("org.jetbrains.dokka") version "2.0.0"
 
-    // Maven publishing
-    // https://github.com/vanniktech/gradle-maven-publish-plugin
-    id("com.vanniktech.maven.publish") version "0.34.0" apply false
 }
 
 tasks.dokkaGfmMultiModule {
     moduleName.set("Bunny Stream Android API")
     outputDirectory.set(file("docs"))
-}
-
-subprojects {
-    // Only configure publishing in Android-library modules
-    pluginManager.withPlugin("com.android.library") {
-        // Apply the vanniktech maven publish plugin to each library module
-        pluginManager.apply("com.vanniktech.maven.publish")
-        
-        // Configure the plugin with common settings
-        extensions.configure<com.vanniktech.maven.publish.MavenPublishBaseExtension> {
-            // Configure publishing to Maven Central via Sonatype Central Portal with automatic release
-            publishToMavenCentral(automaticRelease = true)
-            
-            // Enable GPG signing for all publications
-            signAllPublications()
-            
-            // Configure POM metadata
-            pom {
-                name.set("Bunny Stream Android SDK - ${project.name}")
-                description.set("Bunny Stream Android SDK - ${project.name} module")
-                url.set("https://github.com/BunnyWay/bunny-stream-android")
-                
-                licenses {
-                    license {
-                        name.set("MIT License")
-                        url.set("https://github.com/BunnyWay/bunny-stream-android/blob/main/LICENSE")
-                    }
-                }
-                
-                developers {
-                    developer {
-                        id.set("bunnyway")
-                        name.set("BunnyWay")
-                        email.set("support@bunny.net")
-                    }
-                }
-                
-                scm {
-                    connection.set("scm:git:git://github.com/BunnyWay/bunny-stream-android.git")
-                    developerConnection.set("scm:git:ssh://github.com/BunnyWay/bunny-stream-android.git")
-                    url.set("https://github.com/BunnyWay/bunny-stream-android")
-                }
-            }
-        }
-    }
 }
 
 // Resolve version from env/props (no failure by default)
