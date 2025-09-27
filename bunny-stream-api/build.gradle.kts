@@ -15,6 +15,7 @@ publishing {
         create<MavenPublication>("release") {
             groupId = "com.github.RootHex200"
             artifactId = "bunny-stream-api"
+
             afterEvaluate {
                 from(components["release"])
             }
@@ -22,6 +23,9 @@ publishing {
     }
 }
 android {
+    publishing {
+        singleVariant("release")
+    }
     buildFeatures {
         buildConfig = true
     }
@@ -59,10 +63,6 @@ android {
             initWith(getByName("debug"))
             buildConfigField("String", "BASE_API", "\"https://video.testfluffle.net\"")
         }
-    }
-
-    publishing {
-        singleVariant("release")
     }
 
     compileOptions {

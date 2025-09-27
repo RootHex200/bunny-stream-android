@@ -11,6 +11,7 @@ publishing {
         create<MavenPublication>("release") {
             groupId = "com.github.RootHex200"
             artifactId = "bunny-stream-player"
+
             afterEvaluate {
                 from(components["release"])
             }
@@ -18,6 +19,9 @@ publishing {
     }
 }
 android {
+    publishing {
+        singleVariant("release")
+    }
     namespace = "net.bunny.player"
     compileSdk = 35
 
@@ -44,9 +48,6 @@ android {
         create("staging") {
             initWith(getByName("debug"))
         }
-    }
-    publishing {
-        singleVariant("release")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
