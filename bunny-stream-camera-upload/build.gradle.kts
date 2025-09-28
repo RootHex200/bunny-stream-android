@@ -4,7 +4,6 @@ plugins {
     id("org.jetbrains.dokka")
     id("org.jetbrains.kotlin.plugin.compose") version "2.1.20"
 }
-
 android {
     namespace = "net.bunny.recording"
     compileSdk = 35

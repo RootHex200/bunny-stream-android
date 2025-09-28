@@ -8,9 +8,24 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
     id("org.jetbrains.dokka")
     id("org.jetbrains.kotlin.plugin.compose") version "2.1.20"
+    id("maven-publish")
 }
+publishing {
+    publications {
+        create<MavenPublication>("release") {
+            groupId = "com.github.RootHex200"
+            artifactId = "bunny-stream-api"
 
+            afterEvaluate {
+                from(components["release"])
+            }
+        }
+    }
+}
 android {
+    publishing {
+        singleVariant("release")
+    }
     buildFeatures {
         buildConfig = true
     }

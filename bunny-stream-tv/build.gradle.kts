@@ -3,13 +3,12 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("kotlin-parcelize")
 }
-
 android {
     namespace = "net.bunny.tv"
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 21
+        minSdk = 26
         targetSdk = 35
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -23,6 +22,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        getByName("debug") {
+        }
+        create("staging") {
+            initWith(getByName("debug"))
         }
     }
 
