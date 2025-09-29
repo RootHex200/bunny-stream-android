@@ -754,7 +754,13 @@ class BunnyPlayerView @JvmOverloads constructor(
 
     fun showPreviewThumbnail(url: String) {
         Log.d(TAG, "onShowPreviewThumbnail: $url")
-        val thumbnail = ImageView(context)
+        val thumbnail = ImageView(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            //scaleType = ImageView.ScaleType.CENTER_CROP // or FIT_CENTER depending on your preference
+        }
         overlay.removeAllViews()
         overlay.addView(thumbnail)
 
