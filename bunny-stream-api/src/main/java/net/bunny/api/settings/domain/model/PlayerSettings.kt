@@ -21,8 +21,8 @@ data class PlayerSettings(
 ) {
     // "rewind,fast-forward,play-large,captions,current-time,duration,fullscreen,mute,pip,play,progress,settings,volume"
     val subtitlesEnabled = controls.contains("captions")
-    val rewindEnabled = controls.contains("rewind")
-    val fastForwardEnabled = controls.contains("fast-forward")
+    val rewindEnabled = true
+    val fastForwardEnabled = true
     val currentTimeEnabled = controls.contains("current-time")
     val fullScreenEnabled = controls.contains("fullscreen")
     val muteEnabled = controls.contains("mute")
