@@ -29,6 +29,7 @@ interface BunnyPlayer {
     var autoPaused: Boolean
     var playerSettings: PlayerSettings?
     var positionManager: PlaybackPositionManager?
+    var currentReferrer: String?
 
     // Add context access for TV detection
     val context: Context
@@ -75,7 +76,7 @@ interface BunnyPlayer {
     /* Returns the current playback position. */
     fun getCurrentPosition(): Long
 
-    fun playVideo(playerView: PlayerView, video: VideoModel, retentionData: Map<Int, Int>, playerSettings: PlayerSettings)
+    fun playVideo(playerView: PlayerView, video: VideoModel, retentionData: Map<Int, Int>, playerSettings: PlayerSettings, referrer: String? = null)
 
     fun skipForward()
 

@@ -69,6 +69,7 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
 
     companion object {
         private const val TAG = "DefaultBunnyPlayer"
+        private const val DEFAULT_REFERRER = "https://iframe.mediadelivery.net"
 
         private const val SEEK_SKIP_MILLIS = 10 * 1000
         private const val THUMBNAILS_PER_IMAGE = 36
@@ -104,6 +105,7 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
 
     private var currentVideo: VideoModel? = null
     private var currentVideoId: String? = null
+    private var currentReferrer: String? = null
     private var selectedSubtitle: SubtitleInfo? = null
     private var subtitlesEnabled = false
 
@@ -111,6 +113,7 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
 
     // Resume position functionality
     override var positionManager: PlaybackPositionManager? = null
+    override var currentReferrer: String? = null
     private var resumePositionListener: ResumePositionListener? = null
     private val coroutineScope = CoroutineScope(Dispatchers.Main)
 
@@ -155,7 +158,7 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
     private val dataSourceFactory: DataSource.Factory = DataSource.Factory {
         val dataSource: HttpDataSource = httpDataSourceFactory.createDataSource()
         // Needed if "Block Direct Url File Access" is enabled on Dashboard
-        dataSource.setRequestProperty("Referer", "https://iframe.mediadelivery.net/")
+        dataSource.setRequestProperty("Referer", DEFAULT_REFERRER)
         dataSource
     }
 
@@ -430,9 +433,10 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
         playerView: PlayerView,
         video: VideoModel,
         retentionData: Map<Int, Int>,
-        playerSettings: PlayerSettings
+        playerSettings: PlayerSettings,
+        referrer: String? = null
     ) {
-        Log.d(TAG, "playVideo(video=$video, retentionData=$retentionData, playerSettings=$playerSettings)")
+        Log.d(TAG, "playVideo(video=$video, retentionData=$retentionData, playerSettings=$playerSettings, referrer=$referrer)")
 
         // Save position of previous video before switching
         saveCurrentPosition()
@@ -440,9 +444,13 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
         this.playerSettings = playerSettings
         currentVideo = video
         currentVideoId = video.guid
+        currentReferrer = referrer
 
         currentLibraryId = video.videoLibraryId
         resumePosition = playerSettings.resumePosition
+        
+        // Use provided referrer or fallback to default
+        val effectiveReferrer = referrer ?: DEFAULT_REFERRER
 
         // Set up TransferListener for debugging
         val transferListener = object : TransferListener {
@@ -475,7 +483,7 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
         // Create HTTP data source factory with headers
         val httpFactory = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
-            .setDefaultRequestProperties(mapOf("Referer" to "https://iframe.mediadelivery.net"))
+            .setDefaultRequestProperties(mapOf("Referer" to effectiveReferrer))
             .setUserAgent(Util.getUserAgent(context, "BunnyStreamPlayer"))
             .setTransferListener(transferListener)
 
@@ -506,7 +514,7 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
             mediaItemBuilder.setDrmConfiguration(
                 MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
                     .setLicenseUri(drmLicenseUri)
-                    .setLicenseRequestHeaders(mapOf("Referer" to "https://iframe.mediadelivery.net"))
+                    .setLicenseRequestHeaders(mapOf("Referer" to effectiveReferrer))
                     .setMultiSession(true)
                     .setForceDefaultLicenseUri(true)
                     .build()

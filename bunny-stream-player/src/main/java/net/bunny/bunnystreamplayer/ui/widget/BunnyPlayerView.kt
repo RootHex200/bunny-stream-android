@@ -138,7 +138,8 @@ class BunnyPlayerView @JvmOverloads constructor(
             applyStyle()
 
             bunnyPlayer?.seekThumbnail?.let {
-                previewLoader = PreviewLoader(context, it)
+                val referrer = bunnyPlayer?.currentReferrer ?: "https://iframe.mediadelivery.net"
+                previewLoader = PreviewLoader(context, it, referrer)
             }
         }
 

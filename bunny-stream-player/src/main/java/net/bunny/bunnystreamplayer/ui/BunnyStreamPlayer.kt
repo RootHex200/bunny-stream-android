@@ -70,6 +70,7 @@ class BunnyStreamPlayer @JvmOverloads constructor(
     private var resumePositionCallback: ((PlaybackPosition, (Boolean) -> Unit) -> Unit)? = null
     private var currentVideoId: String? = null
     private var currentLibraryId: Long? = null
+    private var currentReferrer: String? = null
     private var resumeConfig: ResumeConfig = ResumeConfig()
     /**
      * Check if the app is running on Android TV
@@ -279,11 +280,12 @@ class BunnyStreamPlayer @JvmOverloads constructor(
         }
     }
 
-    override fun playVideo(videoId: String, libraryId: Long?, videoTitle: String) {
+    override fun playVideo(videoId: String, libraryId: Long?, videoTitle: String, referrer: String?) {
         Log.d(TAG, "playVideo videoId=$videoId")
 
         currentVideoId = videoId
         currentLibraryId = libraryId
+        currentReferrer = referrer
         val providedLibraryId = libraryId ?: BunnyStreamApi.libraryId
 
         if (!BunnyStreamApi.isInitialized()) {
@@ -367,11 +369,12 @@ class BunnyStreamPlayer @JvmOverloads constructor(
         pendingJob = null
     }
 
-    override fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?) {
+    override fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?, referrer: String?) {
         Log.d(TAG, "playVideoWithToken videoId=$videoId, token=$token, expires=$expires")
 
         currentVideoId = videoId
         currentLibraryId = libraryId
+        currentReferrer = referrer
         val providedLibraryId = libraryId ?: BunnyStreamApi.libraryId
 
         if (!BunnyStreamApi.isInitialized()) {
@@ -488,7 +491,7 @@ class BunnyStreamPlayer @JvmOverloads constructor(
             }
         }
 
-        bunnyPlayer.playVideo(binding.playerView, video, retentionData, playerSettings)
+        bunnyPlayer.playVideo(binding.playerView, video, retentionData, playerSettings, currentReferrer)
         playerView.bunnyPlayer = bunnyPlayer
 
         // Start auto-save after video starts playing
