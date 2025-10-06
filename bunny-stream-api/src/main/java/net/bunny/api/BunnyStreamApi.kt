@@ -19,6 +19,7 @@ import okhttp3.OkHttpClient
 class BunnyStreamApi private constructor(
     context: Context,
     accessKey: String?,
+    referer: String?,
 ) : StreamApi {
 
     companion object {
@@ -35,10 +36,11 @@ class BunnyStreamApi private constructor(
         @Volatile
         private var instance: StreamApi? = null
 
-        fun initialize(context: Context, accessKey: String?, libraryId: Long) {
+        fun initialize(context: Context, accessKey: String?, libraryId: Long, referer: String? = null) {
             instance = BunnyStreamApi(
                 context.applicationContext,
                 accessKey,
+                referer,
             )
 
             this.libraryId = libraryId
@@ -68,12 +70,11 @@ class BunnyStreamApi private constructor(
         .addInterceptor(Interceptor { chain ->
             val originalRequest = chain.request()
             val path = originalRequest.url.encodedPath
-
             val isPlayEndpoint = path.endsWith("/play")
             val requestBuilder = originalRequest.newBuilder()
 
             if (isPlayEndpoint) {
-                requestBuilder.header("Referer", "https://iframe.mediadelivery.net/")
+                requestBuilder.header("Referer", referer ?: "https://iframe.mediadelivery.net/")
             }
 
             chain.proceed(requestBuilder.build())
