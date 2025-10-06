@@ -279,7 +279,7 @@ class BunnyStreamPlayer @JvmOverloads constructor(
         }
     }
 
-    override fun playVideo(videoId: String, libraryId: Long?, videoTitle: String) {
+    override fun playVideo(videoId: String, libraryId: Long?, videoTitle: String, refererValue: String?) {
         Log.d(TAG, "playVideo videoId=$videoId")
 
         currentVideoId = videoId
@@ -300,6 +300,8 @@ class BunnyStreamPlayer @JvmOverloads constructor(
         loadVideoJob?.cancel()
 
         pendingJob = {
+            // Capture refererValue for use in the lambda
+            val capturedRefererValue = refererValue
             scope!!.launch {
 
                 val video: VideoModel
@@ -318,7 +320,7 @@ class BunnyStreamPlayer @JvmOverloads constructor(
                 }
 
                 val settings = BunnyStreamApi.getInstance()
-                    .fetchPlayerSettings(providedLibraryId, videoId)
+                    .fetchPlayerSettings(providedLibraryId, videoId, capturedRefererValue)
 
                 settings.fold(
                     ifLeft = {
@@ -349,11 +351,11 @@ class BunnyStreamPlayer @JvmOverloads constructor(
                                 videoUrl = "",
                                 seekPath = "",
                                 captionsPath = ""
-                            )
+                            ), capturedRefererValue
                         )
                         playerView.showError(it)
                     },
-                    ifRight = { initializeVideo(video, it) }
+                    ifRight = { initializeVideo(video, it, capturedRefererValue) }
                 )
             }
         }
@@ -367,8 +369,8 @@ class BunnyStreamPlayer @JvmOverloads constructor(
         pendingJob = null
     }
 
-    override fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?) {
-        Log.d(TAG, "playVideoWithToken videoId=$videoId, token=$token, expires=$expires")
+    override fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?, refererValue: String?) {
+        Log.d(TAG, "playVideoWithToken videoId=$videoId, token=$token, expires=$expires refervalue=${refererValue}")
 
         currentVideoId = videoId
         currentLibraryId = libraryId
@@ -388,6 +390,8 @@ class BunnyStreamPlayer @JvmOverloads constructor(
         loadVideoJob?.cancel()
 
         pendingJob = {
+            // Capture refererValue for use in the lambda
+            val capturedRefererValue = refererValue
             scope!!.launch {
 
                 val video: VideoModel
@@ -408,7 +412,7 @@ class BunnyStreamPlayer @JvmOverloads constructor(
                 }
 
                 val settings = BunnyStreamApi.getInstance()
-                    .fetchPlayerSettingsWithToken(providedLibraryId, videoId, token, expires)
+                    .fetchPlayerSettingsWithToken(providedLibraryId, videoId, token, expires, capturedRefererValue)
 
                 settings.fold(
                     ifLeft = {
@@ -439,11 +443,11 @@ class BunnyStreamPlayer @JvmOverloads constructor(
                                 videoUrl = "",
                                 seekPath = "",
                                 captionsPath = ""
-                            )
+                            ), capturedRefererValue
                         )
                         playerView.showError(it)
                     },
-                    ifRight = { initializeVideo(video, it) }
+                    ifRight = { initializeVideo(video, it, capturedRefererValue) }
                 )
             }
         }
@@ -469,7 +473,7 @@ class BunnyStreamPlayer @JvmOverloads constructor(
         // Auto-save will start automatically via lifecycle observer
     }
 
-    private suspend fun initializeVideo(video: VideoModel, playerSettings: PlayerSettings) {
+    private suspend fun initializeVideo(video: VideoModel, playerSettings: PlayerSettings, refererValue: String?) {
         playerView.showPreviewThumbnail(playerSettings.thumbnailUrl)
 
         var retentionData: Map<Int, Int> = mutableMapOf()
@@ -488,7 +492,7 @@ class BunnyStreamPlayer @JvmOverloads constructor(
             }
         }
 
-        bunnyPlayer.playVideo(binding.playerView, video, retentionData, playerSettings)
+        bunnyPlayer.playVideo(binding.playerView, video, retentionData, playerSettings, refererValue)
         playerView.bunnyPlayer = bunnyPlayer
 
         // Start auto-save after video starts playing

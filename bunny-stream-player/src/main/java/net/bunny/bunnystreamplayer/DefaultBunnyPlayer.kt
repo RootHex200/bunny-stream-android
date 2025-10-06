@@ -27,6 +27,7 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
+import net.bunny.bunnystreamplayer.ui.widget.BunnyPlayerView
 import com.google.android.gms.cast.framework.CastState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -430,12 +431,16 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
         playerView: PlayerView,
         video: VideoModel,
         retentionData: Map<Int, Int>,
-        playerSettings: PlayerSettings
+        playerSettings: PlayerSettings,
+        refererValue: String?
     ) {
-        Log.d(TAG, "playVideo(video=$video, retentionData=$retentionData, playerSettings=$playerSettings)")
+        Log.d(TAG, "playVideo(video=$video, retentionData=$retentionData, playerSettings=$playerSettings, refererValue=$refererValue)")
 
         // Save position of previous video before switching
         saveCurrentPosition()
+
+        // Use provided referer value or fall back to default
+        val finalRefererValue = refererValue ?: "https://iframe.mediadelivery.net/"
 
         this.playerSettings = playerSettings
         currentVideo = video
@@ -475,7 +480,7 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
         // Create HTTP data source factory with headers
         val httpFactory = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
-            .setDefaultRequestProperties(mapOf("Referer" to "https://iframe.mediadelivery.net"))
+            .setDefaultRequestProperties(mapOf("Referer" to finalRefererValue))
             .setUserAgent(Util.getUserAgent(context, "BunnyStreamPlayer"))
             .setTransferListener(transferListener)
 
@@ -506,7 +511,7 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
             mediaItemBuilder.setDrmConfiguration(
                 MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
                     .setLicenseUri(drmLicenseUri)
-                    .setLicenseRequestHeaders(mapOf("Referer" to "https://iframe.mediadelivery.net"))
+                    .setLicenseRequestHeaders(mapOf("Referer" to finalRefererValue))
                     .setMultiSession(true)
                     .setForceDefaultLicenseUri(true)
                     .build()
@@ -529,6 +534,12 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
         playerView.setShutterBackgroundColor(Color.TRANSPARENT)
         playerView.useController = true
         playerView.keepScreenOn = true
+        
+        // Set referer value on BunnyPlayerView if it's a BunnyPlayerView
+        if (playerView is BunnyPlayerView) {
+            playerView.refererValue = finalRefererValue
+        }
+        
         Log.d(TAG, "PlayerView attached: ${playerView.isAttachedToWindow}, size: ${playerView.width}x${playerView.height}")
 
         localPlayer = ExoPlayer.Builder(context)

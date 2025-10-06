@@ -13,8 +13,9 @@ interface BunnyPlayer {
      * Plays a video and fetches additional info, e.g. chapters, moments and subtitles
      *
      * @param videoId Video ID
+     * @param refererValue Custom referer value for API calls, null to use default
      */
-    fun playVideo(videoId: String, libraryId: Long?, videoTitle: String)
+    fun playVideo(videoId: String, libraryId: Long?, videoTitle: String, refererValue: String? = null)
 
     /**
      * Plays a video with token-based authentication
@@ -24,8 +25,9 @@ interface BunnyPlayer {
      * @param videoTitle Video title
      * @param token Authentication token
      * @param expires Token expiration timestamp
+     * @param refererValue Custom referer value for API calls, null to use default
      */
-    fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?)
+    fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?, refererValue: String? = null)
 
     /**
      * Pauses video

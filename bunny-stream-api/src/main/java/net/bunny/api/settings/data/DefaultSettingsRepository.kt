@@ -4,6 +4,7 @@ import arrow.core.Either
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.CoroutineDispatcher
@@ -18,12 +19,16 @@ class DefaultSettingsRepository(
     private val coroutineDispatcher: CoroutineDispatcher
 ) : SettingsRepository {
 
-    override suspend fun fetchSettings(libraryId: Long, videoId: String):
+    override suspend fun fetchSettings(libraryId: Long, videoId: String, refererValue: String?):
             Either<String, PlayerSettings> = withContext(coroutineDispatcher) {
         val endpoint = "${BunnyStreamApi.baseApi}/library/$libraryId/videos/$videoId/play"
 
         return@withContext try {
-            val response = httpClient.get(endpoint)
+            val response = httpClient.get(endpoint) {
+                refererValue?.let { referer ->
+                    header("Referer", referer)
+                }
+            }
             when (response.status.value) {
                 HttpStatusCode.OK.value -> {
                     val result: PlayerSettingsResponse = response.body()
@@ -40,7 +45,7 @@ class DefaultSettingsRepository(
         }
     }
 
-    override suspend fun fetchSettingsWithToken(libraryId: Long, videoId: String, token: String?, expires: Long?):
+    override suspend fun fetchSettingsWithToken(libraryId: Long, videoId: String, token: String?, expires: Long?, refererValue: String?):
             Either<String, PlayerSettings> = withContext(coroutineDispatcher) {
         val endpoint = "${BunnyStreamApi.baseApi}/library/$libraryId/videos/$videoId/play"
 
@@ -51,6 +56,9 @@ class DefaultSettingsRepository(
                 }
                 expires?.let { expiresValue ->
                     parameter("expires", expiresValue)
+                }
+                refererValue?.let { referer ->
+                    header("Referer", referer)
                 }
             }
             when (response.status.value) {

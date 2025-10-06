@@ -446,7 +446,7 @@ fun BunnyPlayerComposable(
             },
             update = {
                 if (token != null && expires != null) {
-                    it.playVideoWithToken(videoId, libraryId, videoTitle = "", token, expires)
+                    it.playVideoWithToken(videoId, libraryId, videoTitle = "", token, expires, refererValue = "https://sabitur.klasio.dev")
                 } else {
                     it.playVideo(videoId, libraryId, videoTitle = "")
                 }

@@ -141,7 +141,7 @@ class BunnyPlayerView @JvmOverloads constructor(
             applyStyle()
 
             bunnyPlayer?.seekThumbnail?.let {
-                previewLoader = PreviewLoader(context, it)
+                previewLoader = PreviewLoader(context, it, refererValue)
             }
         }
 
@@ -156,6 +156,15 @@ class BunnyPlayerView @JvmOverloads constructor(
             Log.d(TAG, "set playerSettings: $value")
             field = value
             applyStyle()
+        }
+
+    var refererValue: String? = null
+        set(value) {
+            field = value
+            // Update PreviewLoader with new referer value if it exists
+            bunnyPlayer?.seekThumbnail?.let {
+                previewLoader = PreviewLoader(context, it, value)
+            }
         }
 
     private var previewLoader: PreviewLoader? = null
@@ -765,9 +774,9 @@ class BunnyPlayerView @JvmOverloads constructor(
         overlay.addView(thumbnail)
 
         val uri = Uri.parse(url)
-        val referer = "${uri.scheme}://${uri.host}/"
+        val finalRefererValue = refererValue ?: "${uri.scheme}://${uri.host}/"
         val headers = LazyHeaders.Builder()
-            .addHeader("Referer", referer)
+            .addHeader("Referer", finalRefererValue)
             .build()
         val glideUrl = GlideUrl(url, headers)
         Glide.with(context).load(glideUrl).into(thumbnail)

@@ -11,6 +11,7 @@ import net.bunny.bunnystreamplayer.model.SeekThumbnail
 class PreviewLoader(
     private val context: Context,
     private val seekThumbnail: SeekThumbnail,
+    private val refererValue: String? = null
 ) {
     fun loadPreview(currentPosition: Long, previewImageView: ImageView) {
         val currentFrameGlobal = (currentPosition / seekThumbnail.frameDurationPerThumbnail).toInt()
@@ -20,7 +21,7 @@ class PreviewLoader(
         val currentPositionWithinJpg = (currentFrameLocal * seekThumbnail.frameDurationPerThumbnail).toLong()
 
         val glideUrl = GlideUrl(seekThumbnail.seekThumbnailUrls[safeJpgIndex]) {
-            mapOf("Referer" to "https://iframe.mediadelivery.net/")
+            mapOf("Referer" to (refererValue ?: "https://iframe.mediadelivery.net/"))
         }
         Glide
             .with(context)
