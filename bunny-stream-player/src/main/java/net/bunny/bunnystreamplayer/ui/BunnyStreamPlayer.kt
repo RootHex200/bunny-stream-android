@@ -71,6 +71,7 @@ class BunnyStreamPlayer @JvmOverloads constructor(
     private var currentVideoId: String? = null
     private var currentLibraryId: Long? = null
     private var resumeConfig: ResumeConfig = ResumeConfig()
+    private var isPortraitMode: Boolean = false
     /**
      * Check if the app is running on Android TV
      */
@@ -91,7 +92,7 @@ class BunnyStreamPlayer @JvmOverloads constructor(
     /**
      * Play video with automatic TV/Mobile detection
      */
-    fun playVideoWithTVDetection(videoId: String, libraryId: Long?) {
+    fun playVideoWithTVDetection(videoId: String, libraryId: Long?, isPortrait: Boolean = false) {
         if (isRunningOnTV()) {
             // Launch TV player - need to import from the tv module
             try {
@@ -100,11 +101,11 @@ class BunnyStreamPlayer @JvmOverloads constructor(
                 startMethod.invoke(null, context, videoId, libraryId ?: -1L, null)
             } catch (e: Exception) {
                 Log.w(TAG, "TV player not available, falling back to mobile player", e)
-                playVideo(videoId, libraryId, videoTitle = "") //TODO: must be change to real video title
+                playVideo(videoId, libraryId, videoTitle = "", refererValue = null, isPortrait = isPortrait) //TODO: must be change to real video title
             }
         } else {
             // Use regular mobile player
-            playVideo(videoId, libraryId, videoTitle = "") //TODO: must be change to real video title
+            playVideo(videoId, libraryId, videoTitle = "", refererValue = null, isPortrait = isPortrait) //TODO: must be change to real video title
         }
     }
     private val resumePositionListener = object : ResumePositionListener {
@@ -165,7 +166,7 @@ class BunnyStreamPlayer @JvmOverloads constructor(
             override fun onFullscreenToggleClicked() {
                 saveCurrentPosition() // Save before fullscreen transition
                 playerView.bunnyPlayer = null
-                FullScreenPlayerActivity.show(context, iconSet) {
+                FullScreenPlayerActivity.show(context, iconSet, isPortraitMode) {
                     Log.d(TAG, "onFullscreenExited")
                     playerView.bunnyPlayer = bunnyPlayer
                     startAutoSave() // Resume auto-save after returning from fullscreen
@@ -279,11 +280,12 @@ class BunnyStreamPlayer @JvmOverloads constructor(
         }
     }
 
-    override fun playVideo(videoId: String, libraryId: Long?, videoTitle: String, refererValue: String?) {
-        Log.d(TAG, "playVideo videoId=$videoId")
+    override fun playVideo(videoId: String, libraryId: Long?, videoTitle: String, refererValue: String?, isPortrait: Boolean) {
+        Log.d(TAG, "playVideo videoId=$videoId, isPortrait=$isPortrait")
 
         currentVideoId = videoId
         currentLibraryId = libraryId
+        isPortraitMode = isPortrait
         val providedLibraryId = libraryId ?: BunnyStreamApi.libraryId
 
         if (!BunnyStreamApi.isInitialized()) {
@@ -369,11 +371,12 @@ class BunnyStreamPlayer @JvmOverloads constructor(
         pendingJob = null
     }
 
-    override fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?, refererValue: String?) {
-        Log.d(TAG, "playVideoWithToken videoId=$videoId, token=$token, expires=$expires refervalue=${refererValue}")
+    override fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?, refererValue: String?, isPortrait: Boolean) {
+        Log.d(TAG, "playVideoWithToken videoId=$videoId, token=$token, expires=$expires refervalue=${refererValue}, isPortrait=$isPortrait")
 
         currentVideoId = videoId
         currentLibraryId = libraryId
+        isPortraitMode = isPortrait
         val providedLibraryId = libraryId ?: BunnyStreamApi.libraryId
 
         if (!BunnyStreamApi.isInitialized()) {

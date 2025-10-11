@@ -14,8 +14,9 @@ interface BunnyPlayer {
      *
      * @param videoId Video ID
      * @param refererValue Custom referer value for API calls, null to use default
+     * @param isPortrait If true, video will be displayed in portrait fullscreen mode, if false, landscape mode
      */
-    fun playVideo(videoId: String, libraryId: Long?, videoTitle: String, refererValue: String? = null)
+    fun playVideo(videoId: String, libraryId: Long?, videoTitle: String, refererValue: String? = null, isPortrait: Boolean = false)
 
     /**
      * Plays a video with token-based authentication
@@ -26,8 +27,9 @@ interface BunnyPlayer {
      * @param token Authentication token
      * @param expires Token expiration timestamp
      * @param refererValue Custom referer value for API calls, null to use default
+     * @param isPortrait If true, video will be displayed in portrait fullscreen mode, if false, landscape mode
      */
-    fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?, refererValue: String? = null)
+    fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?, refererValue: String? = null, isPortrait: Boolean = false)
 
     /**
      * Pauses video

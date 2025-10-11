@@ -19,7 +19,7 @@
             android:value="androidx.media3.cast.DefaultCastOptionsProvider" />
         <activity
             android:name="net.bunny.bunnystreamplayer.ui.fullscreen.FullScreenPlayerActivity"
-            android:screenOrientation="sensorLandscape" />
+            android:screenOrientation="unspecified" />
     </application>
 
 </manifest>

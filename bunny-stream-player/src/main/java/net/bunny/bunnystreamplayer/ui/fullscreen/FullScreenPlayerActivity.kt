@@ -27,8 +27,9 @@ class FullScreenPlayerActivity : AppCompatActivity() {
         private const val TAG = "FullScreenPlayerActivity"
         private const val RESULT_RECEIVER = "RESULT_RECEIVER"
         private const val ICON_SET = "ICON_SET"
+        private const val IS_PORTRAIT = "IS_PORTRAIT"
 
-        fun show(context: Context, iconSet: PlayerIconSet, onFullscreenExited: () -> Unit) {
+        fun show(context: Context, iconSet: PlayerIconSet, isPortrait: Boolean, onFullscreenExited: () -> Unit) {
             val resultReceiver = object : ResultReceiver(Handler(Looper.getMainLooper())) {
                 override fun onReceiveResult(resultCode: Int, resultData: Bundle?) {
                     onFullscreenExited.invoke()
@@ -38,6 +39,7 @@ class FullScreenPlayerActivity : AppCompatActivity() {
             val intent = Intent(context, FullScreenPlayerActivity::class.java)
             intent.putExtra(RESULT_RECEIVER, resultReceiver)
             intent.putExtra(ICON_SET, iconSet)
+            intent.putExtra(IS_PORTRAIT, isPortrait)
             context.startActivity(intent)
         }
     }
@@ -58,12 +60,23 @@ class FullScreenPlayerActivity : AppCompatActivity() {
         }
     }
 
+    private val isPortrait by lazy {
+        intent.getBooleanExtra(IS_PORTRAIT, false)
+    }
+
     private val playerView by lazy { findViewById<BunnyPlayerView>(R.id.player_view) }
 
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d(TAG, "onCreate")
+        Log.d(TAG, "onCreate, isPortrait=$isPortrait")
+
+        // Set orientation based on isPortrait value
+        if (isPortrait) {
+            requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+        } else {
+            requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        }
 
         setFullscreenMode()
 
