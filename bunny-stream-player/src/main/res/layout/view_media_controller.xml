@@ -29,8 +29,8 @@
 
         <ImageButton
             android:id="@+id/bunny_replay"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:src="@drawable/ic_replay_10s_48dp"
             android:padding="8dp"
             android:background="@drawable/player_center_controls_background"
@@ -38,8 +38,8 @@
 
         <net.bunny.bunnystreamplayer.ui.widget.ToggleableImageButton
             android:id="@+id/bunny_play_pause"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:layout_gravity="center"
             app:tibDefaultIcon="@drawable/ic_play_48dp"
             app:tibToggledIcon="@drawable/ic_pause_48dp"
@@ -50,8 +50,8 @@
 
         <ImageButton
             android:id="@+id/bunny_forward"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:src="@drawable/ic_forward_10s_48dp"
             android:padding="8dp"
             android:background="@drawable/player_center_controls_background"
@@ -120,6 +120,7 @@
                 android:layout_height="wrap_content"/>
 
             <TextView
+                android:textColor="@color/white"
                 android:id="@+id/exo_position"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -127,6 +128,7 @@
                 android:paddingVertical="8dp"/>
 
             <TextView
+                android:textColor="@color/white"
                 android:id="@+id/position_duration_divider"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -135,6 +137,7 @@
                 android:paddingHorizontal="3dp"/>
 
             <TextView
+                android:textColor="@color/white"
                 android:id="@+id/exo_duration"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
