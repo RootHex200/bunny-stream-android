@@ -197,6 +197,7 @@ class BunnyPlayerView @JvmOverloads constructor(
         findViewById<ImageButton>(R.id.bunny_fullscreen)
     }
 
+
     private val progressTextView by lazy {
         findViewById<TextView>(R.id.exo_position)
     }
@@ -342,6 +343,7 @@ class BunnyPlayerView @JvmOverloads constructor(
         fullScreenButton.setOnClickListener {
             fullscreenListener?.onFullscreenToggleClicked()
         }
+
 
         subtitle.isVisible = bunnyPlayer?.getSubtitles()?.subtitles?.isNotEmpty() == true
 

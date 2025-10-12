@@ -57,6 +57,7 @@ import net.bunny.bunnystreamplayer.model.SubtitleInfo
 import net.bunny.bunnystreamplayer.model.Subtitles
 import net.bunny.bunnystreamplayer.model.VideoQuality
 import net.bunny.bunnystreamplayer.model.VideoQualityOptions
+import net.bunny.bunnystreamplayer.util.ScreenshotProtectionUtil
 import org.openapitools.client.models.VideoModel
 import kotlin.math.ceil
 import kotlin.math.round
@@ -1022,5 +1023,15 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
             .setIgnoredTextSelectionFlags(C.SELECTION_FLAG_FORCED.inv())
             .setPreferredTextLanguage(lang)
             .build()
+    }
+
+    // Screenshot Protection Methods
+    override fun setScreenshotProtection(enable: Boolean) {
+        ScreenshotProtectionUtil.setScreenshotProtection(context, enable)
+        Log.d(TAG, "Screenshot protection ${if (enable) "enabled" else "disabled"}")
+    }
+
+    override fun isScreenshotProtectionEnabled(): Boolean {
+        return ScreenshotProtectionUtil.isScreenshotProtectionEnabled(context)
     }
 }

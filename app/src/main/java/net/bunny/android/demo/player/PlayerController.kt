@@ -130,4 +130,5 @@ class PlayerController(private val player: BunnyStreamPlayer) {
             Log.e(TAG, "Error resuming player", e)
         }
     }
+    
 }

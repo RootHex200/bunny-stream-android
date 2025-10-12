@@ -68,6 +68,7 @@ fun PlayerRoute(
     libraryId: Long?,
     token: String? = null,
     expires: Long? = null,
+    isScreenshotProtectionEnabled: Boolean = false,
     modifier: Modifier = Modifier,
     viewModel: PlayerViewModel = viewModel(),
 ) {
@@ -79,6 +80,7 @@ fun PlayerRoute(
         libraryId = libraryId,
         token = token,
         expires = expires,
+        isScreenshotProtectionEnabled = isScreenshotProtectionEnabled,
         uiState,
         onBackClicked = { appState.navController.popBackStack() },
     )
@@ -100,6 +102,7 @@ fun PlayerScreen(
     libraryId: Long?,
     token: String? = null,
     expires: Long? = null,
+    isScreenshotProtectionEnabled: Boolean = false,
     uiState: VideoUiState,
     onBackClicked: () -> Unit,
 ) {
@@ -108,7 +111,6 @@ fun PlayerScreen(
     var showResumeDialog by remember { mutableStateOf(false) }
     var resumePosition by remember { mutableStateOf<PlaybackPosition?>(null) }
     var resumeCallback by remember { mutableStateOf<((Boolean) -> Unit)?>(null) }
-
     // Get resume position preferences
     val resumePrefs = App.di.resumePositionPrefs
 
@@ -144,6 +146,7 @@ fun PlayerScreen(
                 libraryId = libraryId,
                 token = token,
                 expires = expires,
+                isScreenshotProtectionEnabled = isScreenshotProtectionEnabled,
                 resumePosition = when (uiState) {
                     is VideoUiState.VideoUiLoaded -> uiState.resumePosition
                     else -> 0L
@@ -175,6 +178,7 @@ fun PlayerScreen(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
+
 
             when (uiState) {
                 VideoUiState.VideoUiEmpty -> {}
@@ -395,6 +399,7 @@ fun BunnyPlayerComposable(
     libraryId: Long?,
     token: String? = null,
     expires: Long? = null,
+    isScreenshotProtectionEnabled: Boolean = false,
     resumePosition: Long = 0L,
     onPlayerReady: (BunnyStreamPlayer) -> Unit = {},
     onResumePosition: ((PlaybackPosition, (Boolean) -> Unit) -> Unit)? = null,
@@ -447,10 +452,10 @@ fun BunnyPlayerComposable(
             update = {
                 if (token != null && expires != null) {
                     it.playVideoWithToken(
-                        videoId, libraryId, videoTitle = "", token, expires, refererValue = "https://sabitur.klasio.dev", isPortrait = true)
+                        videoId, libraryId, videoTitle = "", token, expires, refererValue = "https://sabitur.klasio.dev", isPortrait = true, isScreenshotProtectionEnabled = isScreenshotProtectionEnabled)
                 } else {
                     it.playVideo(
-                        videoId, libraryId, videoTitle = "", isPortrait = true)
+                        videoId, libraryId, videoTitle = "", isPortrait = true, isScreenshotProtectionEnabled = isScreenshotProtectionEnabled)
                 }
                 onPlayerReady(it)
             },
@@ -518,6 +523,7 @@ fun VideoPropertyItem(prop: VideoProperty) {
         )
     }
 }
+
 
 @Preview
 @Composable

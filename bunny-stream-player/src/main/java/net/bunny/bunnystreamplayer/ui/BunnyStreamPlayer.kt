@@ -30,6 +30,7 @@ import net.bunny.bunnystreamplayer.model.PlayerIconSet
 import net.bunny.bunnystreamplayer.model.getSanitizedRetentionData
 import net.bunny.bunnystreamplayer.ui.fullscreen.FullScreenPlayerActivity
 import net.bunny.bunnystreamplayer.ui.widget.BunnyPlayerView
+import net.bunny.bunnystreamplayer.util.ScreenshotProtectionUtil
 import net.bunny.player.databinding.ViewBunnyVideoPlayerBinding
 import org.openapitools.client.models.VideoModel
 import org.openapitools.client.models.VideoPlayDataModelVideo
@@ -72,6 +73,7 @@ class BunnyStreamPlayer @JvmOverloads constructor(
     private var currentLibraryId: Long? = null
     private var resumeConfig: ResumeConfig = ResumeConfig()
     private var isPortraitMode: Boolean = false
+    private var screenshotProtectionEnabled: Boolean = false
     /**
      * Check if the app is running on Android TV
      */
@@ -225,6 +227,24 @@ class BunnyStreamPlayer @JvmOverloads constructor(
     }
 
     /**
+     * Enable or disable screenshot and screen recording protection
+     * @param enable true to enable protection, false to disable
+     */
+    fun setScreenshotProtection(enable: Boolean) {
+        screenshotProtectionEnabled = enable
+        ScreenshotProtectionUtil.setScreenshotProtection(context, enable)
+        Log.d(TAG, "Screenshot protection ${if (enable) "enabled" else "disabled"}")
+    }
+
+    /**
+     * Check if screenshot protection is currently enabled
+     * @return true if protection is enabled, false otherwise
+     */
+    fun isScreenshotProtectionEnabled(): Boolean {
+        return screenshotProtectionEnabled
+    }
+
+    /**
      * Enable resume position functionality with auto-save
      */
     fun enableResumePosition(
@@ -280,13 +300,16 @@ class BunnyStreamPlayer @JvmOverloads constructor(
         }
     }
 
-    override fun playVideo(videoId: String, libraryId: Long?, videoTitle: String, refererValue: String?, isPortrait: Boolean) {
-        Log.d(TAG, "playVideo videoId=$videoId, isPortrait=$isPortrait")
+    override fun playVideo(videoId: String, libraryId: Long?, videoTitle: String, refererValue: String?, isPortrait: Boolean, isScreenshotProtectionEnabled: Boolean) {
+        Log.d(TAG, "playVideo videoId=$videoId, isPortrait=$isPortrait, isScreenshotProtectionEnabled=$isScreenshotProtectionEnabled")
 
         currentVideoId = videoId
         currentLibraryId = libraryId
         isPortraitMode = isPortrait
         val providedLibraryId = libraryId ?: BunnyStreamApi.libraryId
+        
+        // Set screenshot protection based on parameter
+        setScreenshotProtection(isScreenshotProtectionEnabled)
 
         if (!BunnyStreamApi.isInitialized()) {
             Log.e(
@@ -371,13 +394,16 @@ class BunnyStreamPlayer @JvmOverloads constructor(
         pendingJob = null
     }
 
-    override fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?, refererValue: String?, isPortrait: Boolean) {
-        Log.d(TAG, "playVideoWithToken videoId=$videoId, token=$token, expires=$expires refervalue=${refererValue}, isPortrait=$isPortrait")
+    override fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?, refererValue: String?, isPortrait: Boolean, isScreenshotProtectionEnabled: Boolean) {
+        Log.d(TAG, "playVideoWithToken videoId=$videoId, token=$token, expires=$expires refervalue=${refererValue}, isPortrait=$isPortrait, isScreenshotProtectionEnabled=$isScreenshotProtectionEnabled")
 
         currentVideoId = videoId
         currentLibraryId = libraryId
         isPortraitMode = isPortrait
         val providedLibraryId = libraryId ?: BunnyStreamApi.libraryId
+        
+        // Set screenshot protection based on parameter
+        setScreenshotProtection(isScreenshotProtectionEnabled)
 
         if (!BunnyStreamApi.isInitialized()) {
             Log.e(

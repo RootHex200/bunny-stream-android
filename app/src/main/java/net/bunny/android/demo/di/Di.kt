@@ -15,7 +15,7 @@ class Di(val context: Context) {
     private val resumePrefs = context.getSharedPreferences("resume_position_prefs", Context.MODE_PRIVATE)
 
     val localPrefs = LocalPrefs(prefs)
-    val resumePositionPrefs = ResumePositionPreferences(resumePrefs) // Add this line
+    val resumePositionPrefs = ResumePositionPreferences(resumePrefs)
 
     init {
         BunnyStreamApi.initialize(context, localPrefs.accessKey, localPrefs.libraryId)

@@ -136,6 +136,10 @@ interface BunnyPlayer {
             else -> DeviceType.UNKNOWN
         }
     }
+
+    // Screenshot Protection Methods
+    fun setScreenshotProtection(enable: Boolean)
+    fun isScreenshotProtectionEnabled(): Boolean
 }
 
 enum class DeviceType {
