@@ -30,6 +30,7 @@ import net.bunny.bunnystreamplayer.model.PlayerIconSet
 import net.bunny.bunnystreamplayer.model.getSanitizedRetentionData
 import net.bunny.bunnystreamplayer.ui.fullscreen.FullScreenPlayerActivity
 import net.bunny.bunnystreamplayer.ui.widget.BunnyPlayerView
+import net.bunny.bunnystreamplayer.util.FlutterIntegrationUtil
 import net.bunny.bunnystreamplayer.util.ScreenshotProtectionUtil
 import net.bunny.player.databinding.ViewBunnyVideoPlayerBinding
 import org.openapitools.client.models.VideoModel
@@ -164,13 +165,38 @@ class BunnyStreamPlayer @JvmOverloads constructor(
 
     init {
         playerView.iconSet = iconSet
+        
+        // Apply Flutter optimizations if embedded in Flutter
+        if (FlutterIntegrationUtil.isEmbeddedInFlutter(this@BunnyStreamPlayer)) {
+            FlutterIntegrationUtil.applyFlutterOptimizations(playerView, context)
+        }
+        
         playerView.fullscreenListener = object : BunnyPlayerView.FullscreenListener {
             override fun onFullscreenToggleClicked() {
                 saveCurrentPosition() // Save before fullscreen transition
-                playerView.bunnyPlayer = null
+                
+                // Optimize fullscreen transition to prevent flickering
+                // Don't set bunnyPlayer to null to avoid surface recreation
+                val currentPlayer = bunnyPlayer
+                
+                // Handle Flutter fullscreen transition
+                if (FlutterIntegrationUtil.isEmbeddedInFlutter(this@BunnyStreamPlayer)) {
+                    FlutterIntegrationUtil.handleFlutterFullscreenTransition(playerView, currentPlayer, true)
+                }
+                
                 FullScreenPlayerActivity.show(context, iconSet, isPortraitMode) {
                     Log.d(TAG, "onFullscreenExited")
-                    playerView.bunnyPlayer = bunnyPlayer
+                    
+                    // Handle Flutter fullscreen exit
+                    if (FlutterIntegrationUtil.isEmbeddedInFlutter(this@BunnyStreamPlayer)) {
+                        FlutterIntegrationUtil.handleFlutterFullscreenTransition(playerView, currentPlayer, false)
+                    }
+                    
+                    // Smooth transition back - only reassign if needed
+                    if (playerView.bunnyPlayer != currentPlayer) {
+                        playerView.bunnyPlayer = currentPlayer
+                    }
+                    
                     startAutoSave() // Resume auto-save after returning from fullscreen
                 }
             }
@@ -242,6 +268,15 @@ class BunnyStreamPlayer @JvmOverloads constructor(
      */
     fun isScreenshotProtectionEnabled(): Boolean {
         return screenshotProtectionEnabled
+    }
+
+    /**
+     * Enable Flutter integration optimizations to prevent flickering
+     * Call this method when embedding the player in Flutter PlatformLinkView
+     */
+    override fun enableFlutterOptimizations() {
+        FlutterIntegrationUtil.applyFlutterOptimizations(playerView, context)
+        Log.d(TAG, "Flutter optimizations enabled")
     }
 
     /**

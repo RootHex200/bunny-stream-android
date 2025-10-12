@@ -452,7 +452,7 @@ fun BunnyPlayerComposable(
             update = {
                 if (token != null && expires != null) {
                     it.playVideoWithToken(
-                        videoId, libraryId, videoTitle = "", token, expires, refererValue = "https://sabitur.klasio.dev", isPortrait = true, isScreenshotProtectionEnabled = isScreenshotProtectionEnabled)
+                        videoId, libraryId, videoTitle = "", token, expires, refererValue = "https://sabitur.klasio.dev", isPortrait = true, isScreenshotProtectionEnabled = true)
                 } else {
                     it.playVideo(
                         videoId, libraryId, videoTitle = "", isPortrait = true, isScreenshotProtectionEnabled = isScreenshotProtectionEnabled)

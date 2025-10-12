@@ -70,6 +70,9 @@ class FullScreenPlayerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "onCreate, isPortrait=$isPortrait")
+        
+        // Set theme for smooth transitions
+        setTheme(R.style.FullscreenPlayerTheme)
 
         // Set orientation based on isPortrait value
         if (isPortrait) {
@@ -81,26 +84,46 @@ class FullScreenPlayerActivity : AppCompatActivity() {
         setFullscreenMode()
 
         setContentView(R.layout.activity_fullscreen_player)
-        playerView.bunnyPlayer = DefaultBunnyPlayer.getInstance(this)
-        playerView.isFullscreen = true
-        playerView.iconSet = iconSet
-        playerView.fullscreenListener = object : BunnyPlayerView.FullscreenListener {
-            override fun onFullscreenToggleClicked() {
-                finish()
-                resultReceiver.send(0, null)
-            }
-        }
-
+        
+        // Optimize player setup to prevent flickering
+        setupPlayerView()
+        
         onBackPressedDispatcher.addCallback(
             this,
             object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
                     Log.d(TAG, "handleOnBackPressed")
-                    finish()
-                    resultReceiver.send(0, null)
+                    finishWithTransition()
                 }
             }
         )
+    }
+    
+    private fun setupPlayerView() {
+        // Get the existing player instance to avoid recreation
+        val existingPlayer = DefaultBunnyPlayer.getInstance(this)
+        
+        // Set up the player view with smooth transition
+        playerView.bunnyPlayer = existingPlayer
+        playerView.isFullscreen = true
+        playerView.iconSet = iconSet
+        
+        playerView.fullscreenListener = object : BunnyPlayerView.FullscreenListener {
+            override fun onFullscreenToggleClicked() {
+                finishWithTransition()
+            }
+        }
+        
+        // Ensure smooth surface transition
+        playerView.useController = true
+        playerView.controllerAutoShow = true
+    }
+    
+    private fun finishWithTransition() {
+        // Add smooth transition animation
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+        finish()
+        resultReceiver.send(0, null)
     }
 
     private fun setFullscreenMode(){
