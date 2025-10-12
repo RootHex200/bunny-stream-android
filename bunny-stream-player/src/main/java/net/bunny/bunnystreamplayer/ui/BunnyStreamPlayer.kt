@@ -184,7 +184,7 @@ class BunnyStreamPlayer @JvmOverloads constructor(
                     FlutterIntegrationUtil.handleFlutterFullscreenTransition(playerView, currentPlayer, true)
                 }
                 
-                FullScreenPlayerActivity.show(context, iconSet, isPortraitMode) {
+                FullScreenPlayerActivity.show(context, iconSet, isPortraitMode, screenshotProtectionEnabled) {
                     Log.d(TAG, "onFullscreenExited")
                     
                     // Handle Flutter fullscreen exit

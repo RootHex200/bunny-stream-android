@@ -16,6 +16,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import net.bunny.bunnystreamplayer.DefaultBunnyPlayer
 import net.bunny.bunnystreamplayer.model.PlayerIconSet
 import net.bunny.bunnystreamplayer.ui.widget.BunnyPlayerView
+import net.bunny.bunnystreamplayer.util.ScreenshotProtectionUtil
 import net.bunny.player.R
 
 /**
@@ -28,8 +29,9 @@ class FullScreenPlayerActivity : AppCompatActivity() {
         private const val RESULT_RECEIVER = "RESULT_RECEIVER"
         private const val ICON_SET = "ICON_SET"
         private const val IS_PORTRAIT = "IS_PORTRAIT"
+        private const val SCREENSHOT_PROTECTION_ENABLED = "SCREENSHOT_PROTECTION_ENABLED"
 
-        fun show(context: Context, iconSet: PlayerIconSet, isPortrait: Boolean, onFullscreenExited: () -> Unit) {
+        fun show(context: Context, iconSet: PlayerIconSet, isPortrait: Boolean, isScreenshotProtectionEnabled: Boolean, onFullscreenExited: () -> Unit) {
             val resultReceiver = object : ResultReceiver(Handler(Looper.getMainLooper())) {
                 override fun onReceiveResult(resultCode: Int, resultData: Bundle?) {
                     onFullscreenExited.invoke()
@@ -40,6 +42,7 @@ class FullScreenPlayerActivity : AppCompatActivity() {
             intent.putExtra(RESULT_RECEIVER, resultReceiver)
             intent.putExtra(ICON_SET, iconSet)
             intent.putExtra(IS_PORTRAIT, isPortrait)
+            intent.putExtra(SCREENSHOT_PROTECTION_ENABLED, isScreenshotProtectionEnabled)
             context.startActivity(intent)
         }
     }
@@ -64,15 +67,22 @@ class FullScreenPlayerActivity : AppCompatActivity() {
         intent.getBooleanExtra(IS_PORTRAIT, false)
     }
 
+    private val isScreenshotProtectionEnabled by lazy {
+        intent.getBooleanExtra(SCREENSHOT_PROTECTION_ENABLED, false)
+    }
+
     private val playerView by lazy { findViewById<BunnyPlayerView>(R.id.player_view) }
 
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d(TAG, "onCreate, isPortrait=$isPortrait")
+        Log.d(TAG, "onCreate, isPortrait=$isPortrait, isScreenshotProtectionEnabled=$isScreenshotProtectionEnabled")
         
         // Set theme for smooth transitions
         setTheme(R.style.FullscreenPlayerTheme)
+        
+        // Apply screenshot protection to fullscreen activity
+        ScreenshotProtectionUtil.setScreenshotProtection(this, isScreenshotProtectionEnabled)
 
         // Set orientation based on isPortrait value
         if (isPortrait) {
@@ -150,6 +160,11 @@ class FullScreenPlayerActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        
+        // Restore screenshot protection state when exiting fullscreen
+        // The main player will handle the restoration, but we ensure it's cleared here
+        ScreenshotProtectionUtil.setScreenshotProtection(this, false)
+        
         playerView.bunnyPlayer = null
     }
 }
