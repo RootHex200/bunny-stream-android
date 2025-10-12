@@ -183,13 +183,23 @@ class BunnyStreamPlayer @JvmOverloads constructor(
                 FullScreenPlayerActivity.show(context, iconSet, isPortraitMode, screenshotProtectionEnabled) {
                     Log.d(TAG, "onFullscreenExited")
                     
-                    // Smooth transition back - only reassign if needed
-                    if (playerView.bunnyPlayer != currentPlayer) {
-                        playerView.bunnyPlayer = currentPlayer
+                    // Force surface recreation to fix black screen issue
+                    playerView.post {
+                        // Temporarily clear the player to force surface recreation
+                        playerView.bunnyPlayer = null
+                        
+                        // Post again to ensure proper timing
+                        playerView.post {
+                            // Reassign the player to recreate the surface
+                            playerView.bunnyPlayer = currentPlayer
+                            
+                            // Restore optimal layer type for embedded view
+                            playerView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+                            
+                            // Force surface refresh
+                            playerView.invalidate()
+                        }
                     }
-                    
-                    // Restore optimal layer type for embedded view
-                    playerView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
                     
                     startAutoSave() // Resume auto-save after returning from fullscreen
                 }
@@ -212,6 +222,12 @@ class BunnyStreamPlayer @JvmOverloads constructor(
                 }
 
                 findViewTreeLifecycleOwner()?.lifecycle?.addObserver(lifecycleObserver)
+                
+                // Ensure surface is properly refreshed when view is reattached
+                playerView.post {
+                    playerView.invalidate()
+                    playerView.requestLayout()
+                }
             }
 
             override fun onViewDetachedFromWindow(view: View) {

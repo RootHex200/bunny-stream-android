@@ -188,6 +188,11 @@ class FullScreenPlayerActivity : AppCompatActivity() {
         // The main player will handle the restoration, but we ensure it's cleared here
         ScreenshotProtectionUtil.setScreenshotProtection(this, false)
         
+        // Properly clean up the player view to ensure surface is released
         playerView.bunnyPlayer = null
+        playerView.player = null
+        
+        // Clear any pending operations
+        playerView.clearAnimation()
     }
 }

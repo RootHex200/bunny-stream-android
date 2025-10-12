@@ -149,6 +149,14 @@ class BunnyPlayerView @JvmOverloads constructor(
             bunnyPlayer?.seekThumbnail?.let {
                 previewLoader = PreviewLoader(context, it, refererValue)
             }
+            
+            // Force surface refresh when player is reassigned (especially after fullscreen)
+            if (value != null) {
+                post {
+                    invalidate()
+                    requestLayout()
+                }
+            }
         }
 
     var iconSet: PlayerIconSet = PlayerIconSet()
