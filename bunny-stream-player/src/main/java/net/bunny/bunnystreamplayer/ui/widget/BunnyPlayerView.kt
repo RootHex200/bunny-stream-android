@@ -65,6 +65,12 @@ class BunnyPlayerView @JvmOverloads constructor(
     companion object {
         private const val TAG = "BunnyPlayerView"
     }
+    
+    init {
+        // Optimize for smooth rendering and reduced flickering
+        setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+        setShutterBackgroundColor(android.graphics.Color.BLACK)
+    }
 
     interface FullscreenListener {
         fun onFullscreenToggleClicked()

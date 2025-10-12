@@ -1035,9 +1035,4 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
         return ScreenshotProtectionUtil.isScreenshotProtectionEnabled(context)
     }
 
-    fun enableFlutterOptimizations() {
-        // This method is implemented in BunnyStreamPlayer
-        // DefaultBunnyPlayer doesn't have direct access to PlayerView
-        Log.d(TAG, "enableFlutterOptimizations called on DefaultBunnyPlayer - should be called on BunnyStreamPlayer")
-    }
 }

@@ -84,12 +84,18 @@ class FullScreenPlayerActivity : AppCompatActivity() {
         // Apply screenshot protection to fullscreen activity
         ScreenshotProtectionUtil.setScreenshotProtection(this, isScreenshotProtectionEnabled)
 
-        // Set orientation based on isPortrait value
+        // Set orientation based on isPortrait value with smooth transitions
         if (isPortrait) {
             requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
         } else {
             requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         }
+        
+        // Optimize window for smooth orientation changes
+        window.setFlags(
+            android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+            android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+        )
 
         setFullscreenMode()
 
@@ -113,6 +119,10 @@ class FullScreenPlayerActivity : AppCompatActivity() {
         // Get the existing player instance to avoid recreation
         val existingPlayer = DefaultBunnyPlayer.getInstance(this)
         
+        // Optimize surface handling to prevent flickering
+        playerView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+        playerView.setShutterBackgroundColor(android.graphics.Color.BLACK)
+        
         // Set up the player view with smooth transition
         playerView.bunnyPlayer = existingPlayer
         playerView.isFullscreen = true
@@ -127,6 +137,9 @@ class FullScreenPlayerActivity : AppCompatActivity() {
         // Ensure smooth surface transition
         playerView.useController = true
         playerView.controllerAutoShow = true
+        
+        // Optimize for fullscreen rendering
+        playerView.setWillNotDraw(false)
     }
     
     private fun finishWithTransition() {
@@ -156,6 +169,16 @@ class FullScreenPlayerActivity : AppCompatActivity() {
         super.onPause()
         val autoPaused = playerView.bunnyPlayer?.isPlaying() == true
         playerView.bunnyPlayer?.pause(autoPaused)
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        
+        // Optimize surface during orientation changes to prevent flickering
+        playerView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+        playerView.post {
+            playerView.invalidate()
+        }
     }
 
     override fun onDestroy() {

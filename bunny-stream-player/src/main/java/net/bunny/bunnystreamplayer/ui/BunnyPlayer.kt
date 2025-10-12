@@ -43,9 +43,4 @@ interface BunnyPlayer {
      */
     fun play()
 
-    /**
-     * Enable Flutter integration optimizations to prevent flickering
-     * Call this method when embedding the player in Flutter PlatformLinkView
-     */
-    fun enableFlutterOptimizations()
 }
