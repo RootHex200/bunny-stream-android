@@ -36,7 +36,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 21
 
         buildConfigField("String", "TUS_UPLOAD_ENDPOINT", "\"https://video.bunnycdn.com/tusupload\"")
         buildConfigField("String", "BASE_API", "\"https://video.bunnycdn.com\"")

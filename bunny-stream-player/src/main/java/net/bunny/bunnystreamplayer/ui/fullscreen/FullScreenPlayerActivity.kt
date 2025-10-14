@@ -150,11 +150,14 @@ class FullScreenPlayerActivity : AppCompatActivity() {
     }
 
     private fun setFullscreenMode(){
+        // Use WindowInsetsControllerCompat for API 21+ compatibility
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
 
+        // Set system bars behavior (available from API 30+, but compat handles it)
         windowInsetsController.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 
+        // Hide system bars (compat handles API differences)
         windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
     }
 
