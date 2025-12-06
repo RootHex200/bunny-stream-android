@@ -131,4 +131,7 @@ class PlayerController(private val player: BunnyStreamPlayer) {
         }
     }
     
+    fun downloadVideo(cacheKey: String) {
+        player.downloadCurrentVideo(cacheKey)
+    }
 }

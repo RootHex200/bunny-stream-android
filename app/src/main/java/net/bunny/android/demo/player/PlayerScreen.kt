@@ -68,6 +68,7 @@ fun PlayerRoute(
     libraryId: Long?,
     token: String? = null,
     expires: Long? = null,
+    cacheKey: String? = null,
     isScreenshotProtectionEnabled: Boolean = false,
     modifier: Modifier = Modifier,
     viewModel: PlayerViewModel = viewModel(),
@@ -80,6 +81,7 @@ fun PlayerRoute(
         libraryId = libraryId,
         token = token,
         expires = expires,
+        cacheKey = cacheKey,
         isScreenshotProtectionEnabled = isScreenshotProtectionEnabled,
         uiState,
         onBackClicked = { appState.navController.popBackStack() },
@@ -102,6 +104,7 @@ fun PlayerScreen(
     libraryId: Long?,
     token: String? = null,
     expires: Long? = null,
+    cacheKey: String? = null,
     isScreenshotProtectionEnabled: Boolean = false,
     uiState: VideoUiState,
     onBackClicked: () -> Unit,
@@ -146,6 +149,7 @@ fun PlayerScreen(
                 libraryId = libraryId,
                 token = token,
                 expires = expires,
+                cacheKey = cacheKey,
                 isScreenshotProtectionEnabled = isScreenshotProtectionEnabled,
                 resumePosition = when (uiState) {
                     is VideoUiState.VideoUiLoaded -> uiState.resumePosition
@@ -176,6 +180,18 @@ fun PlayerScreen(
                     playerController?.setSpeed(speed)
                 }
             )
+
+            if (cacheKey != null && playerController != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = { playerController?.downloadVideo(cacheKey) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Text("Download for Offline")
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -399,6 +415,7 @@ fun BunnyPlayerComposable(
     libraryId: Long?,
     token: String? = null,
     expires: Long? = null,
+    cacheKey: String? = null,
     isScreenshotProtectionEnabled: Boolean = false,
     resumePosition: Long = 0L,
     onPlayerReady: (BunnyStreamPlayer) -> Unit = {},
@@ -452,10 +469,10 @@ fun BunnyPlayerComposable(
             update = {
                 if (token != null && expires != null) {
                     it.playVideoWithToken(
-                        videoId, libraryId, videoTitle = "", token, expires, refererValue = "https://sabitur.klasio.dev", isPortrait = true, isScreenshotProtectionEnabled = isScreenshotProtectionEnabled)
+                        videoId, libraryId, videoTitle = "", token, expires, refererValue = "https://sabitur.klasio.dev", isPortrait = true, isScreenshotProtectionEnabled = isScreenshotProtectionEnabled, cacheKey = cacheKey)
                 } else {
                     it.playVideo(
-                        videoId, libraryId, videoTitle = "", isPortrait = true, isScreenshotProtectionEnabled = isScreenshotProtectionEnabled)
+                        videoId, libraryId, videoTitle = "", refererValue = "https://sabitur.klasio.dev", isPortrait = true, isScreenshotProtectionEnabled = isScreenshotProtectionEnabled, cacheKey = cacheKey)
                 }
                 onPlayerReady(it)
             },
