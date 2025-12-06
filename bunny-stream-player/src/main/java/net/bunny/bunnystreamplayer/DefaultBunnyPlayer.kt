@@ -22,6 +22,11 @@ import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.TransferListener
+import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.datasource.cache.CacheDataSink
+import androidx.media3.datasource.cache.CacheWriter
+import androidx.media3.exoplayer.hls.offline.HlsDownloader
+import net.bunny.bunnystreamplayer.util.BunnyCacheManager
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -226,8 +231,8 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
     }
 
     override var seekThumbnail: SeekThumbnail? = null
-
     override var playerSettings: PlayerSettings? = null
+
 
     init {
         // Only initialize Cast if it's available
@@ -433,9 +438,12 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
         video: VideoModel,
         retentionData: Map<Int, Int>,
         playerSettings: PlayerSettings,
-        refererValue: String?
+        refererValue: String?,
+        cacheKey: String?
     ) {
-        Log.d(TAG, "playVideo(video=$video, retentionData=$retentionData, playerSettings=$playerSettings, refererValue=$refererValue)")
+        Log.d(TAG, "playVideo(video=$video, retentionData=$retentionData, playerSettings=$playerSettings, refererValue=$refererValue, cacheKey=$cacheKey)")
+        this.currentVideo = video
+        this.playerSettings = playerSettings
 
         // Save position of previous video before switching
         saveCurrentPosition()
@@ -485,9 +493,23 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
             .setUserAgent(Util.getUserAgent(context, "BunnyStreamPlayer"))
             .setTransferListener(transferListener)
 
+        val dataSourceFactory: DataSource.Factory = if (cacheKey != null) {
+            val cache = BunnyCacheManager.getSimpleCache(context)
+            val cacheSink = CacheDataSink.Factory()
+                .setCache(cache)
+
+            CacheDataSource.Factory()
+                .setCache(cache)
+                .setCacheWriteDataSinkFactory(cacheSink)
+                .setUpstreamDataSourceFactory(httpFactory)
+                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+        } else {
+            httpFactory
+        }
+
         // Create media source factory without setDrmSessionManagerProvider
         val mediaSourceFactory = DefaultMediaSourceFactory(context)
-            .setDataSourceFactory(httpFactory)
+            .setDataSourceFactory(dataSourceFactory)
 
         // Set up subtitle tracks if available
         val subtitleConfigs = video.captions?.map { cap ->
@@ -796,6 +818,70 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
 
     override fun getVideoQualityOptions(): VideoQualityOptions? {
         return getAvailableVideoQualityOptions()
+    }
+
+    override fun downloadCurrentVideo(cacheKey: String) {
+        val url = playerSettings?.videoUrl ?: return
+        val cache = BunnyCacheManager.getSimpleCache(context)
+        val dataSpec = DataSpec.Builder()
+            .setUri(Uri.parse(url))
+            .build()
+        
+        val upstreamFactory = DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+            
+        val cacheDataSource = CacheDataSource.Factory()
+            .setCache(cache)
+            .setUpstreamDataSourceFactory(upstreamFactory)
+            .createDataSource()
+
+        // Run in background using GlobalScope since download should continue even if user navigates away
+        // Ideally should use a Service or WorkManager for robust downloads, but GlobalScope fits for now
+        
+        val video = currentVideo
+        playerSettings?.let { settings ->
+             if (video != null) {
+                 BunnyCacheManager.saveMetadata(context, cacheKey, video, settings)
+             }
+        }
+
+        GlobalScope.launch(Dispatchers.IO) {
+            try {
+                if (url.endsWith(".m3u8") || url.contains("m3u8")) {
+                    // Use HlsDownloader for HLS content
+                    val mediaItem = MediaItem.fromUri(url)
+                    val cacheDataSourceFactory = CacheDataSource.Factory()
+                        .setCache(cache)
+                        .setCacheWriteDataSinkFactory(CacheDataSink.Factory().setCache(cache))
+                        .setUpstreamDataSourceFactory(upstreamFactory)
+
+                    val downloader = HlsDownloader(mediaItem, cacheDataSourceFactory)
+                    downloader.download { _, _, percent ->
+                        Log.d(TAG, "HLS Download progress: $percent%")
+                    }
+                } else {
+                     // Use CacheWriter for other content (MP4, etc)
+                     val cacheDataSource = CacheDataSource.Factory()
+                        .setCache(cache)
+                        .setUpstreamDataSourceFactory(upstreamFactory)
+                        .createDataSource()
+                        
+                     val cacheWriter = CacheWriter(
+                        cacheDataSource,
+                        dataSpec,
+                        null // buffer
+                    ) { requestLength, bytesCached, _ ->
+                        val percentage = if (requestLength > 0) (bytesCached * 100 / requestLength).toInt() else 0
+                        Log.d(TAG, "Download progress: $percentage%")
+                    }
+                    cacheWriter.cache()
+                }
+
+                Log.d(TAG, "Download complete for $cacheKey")
+            } catch (e: Exception) {
+                Log.e(TAG, "Download failed", e)
+            }
+        }
     }
 
     override fun getAudioTrackOptions(): AudioTrackInfoOptions? {
