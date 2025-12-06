@@ -80,29 +80,29 @@ dependencies {
     // Project Module
     // https://docs.gradle.org/current/userguide/java_plugin.html#sec:project_dependencies
     implementation(project(":api"))
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
-    implementation("com.google.code.gson:gson:2.8.9")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("com.google.code.gson:gson:2.12.1")
     // AndroidX and Material
     // https://developer.android.com/jetpack/androidx/releases/core
-    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.core:core-ktx:1.17.0")
     // https://developer.android.com/jetpack/androidx/releases/appcompat
-    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("androidx.appcompat:appcompat:1.7.1")
     // https://github.com/material-components/material-components-android
-    implementation("com.google.android.material:material:1.12.0")
-    implementation("androidx.media3:media3-common:1.6.0")
+    implementation("com.google.android.material:material:1.13.0")
+    implementation("androidx.media3:media3-common:1.8.0")
 
 
     // AndroidX Media3
     // https://developer.android.com/jetpack/androidx/releases/media3
-    implementation("androidx.media3:media3-exoplayer:1.6.0")
+    implementation("androidx.media3:media3-exoplayer:1.8.0")
     // https://developer.android.com/jetpack/androidx/releases/media3
-    implementation("androidx.media3:media3-ui:1.6.0")
+    implementation("androidx.media3:media3-ui:1.8.0")
     // https://developer.android.com/jetpack/androidx/releases/media3
-    implementation("androidx.media3:media3-exoplayer-hls:1.6.0")
+    implementation("androidx.media3:media3-exoplayer-hls:1.8.0")
     // https://developer.android.com/jetpack/androidx/releases/media3
-    implementation("androidx.media3:media3-cast:1.6.0")
+    implementation("androidx.media3:media3-cast:1.8.0")
     // https://developer.android.com/jetpack/androidx/releases/media3
-    implementation("androidx.media3:media3-exoplayer-ima:1.6.0")
+    implementation("androidx.media3:media3-exoplayer-ima:1.8.0")
 
     // AndroidX Startup
     // https://developer.android.com/jetpack/androidx/releases/startup
@@ -110,17 +110,17 @@ dependencies {
 
     // AndroidX Lifecycle
     // https://developer.android.com/jetpack/androidx/releases/lifecycle
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0")
     // https://developer.android.com/jetpack/androidx/releases/lifecycle
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
 
     // Testing Dependencies
     // https://junit.org/junit4/
     testImplementation("junit:junit:4.13.2")
     // https://developer.android.com/jetpack/androidx/releases/test
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
     // https://developer.android.com/jetpack/androidx/releases/test#espresso
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
 
     // Glide for Image Loading
     // https://github.com/bumptech/glide
@@ -136,7 +136,7 @@ dependencies {
 
     // Jetpack Compose Dependencies
     // https://developer.android.com/jetpack/compose/bom
-    implementation(platform("androidx.compose:compose-bom:2025.03.01"))
+    implementation(platform("androidx.compose:compose-bom:2025.12.00"))
     // https://developer.android.com/jetpack/compose/documentation
     implementation("androidx.compose.runtime:runtime")
     // https://developer.android.com/jetpack/compose/documentation
