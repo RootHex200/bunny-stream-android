@@ -36,7 +36,7 @@ import org.openapitools.client.models.VideoModel
 import org.openapitools.client.models.VideoPlayDataModelVideo
 
 
-class BunnyStreamPlayer @JvmOverloads constructor(
+ class BunnyStreamPlayer @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
@@ -300,7 +300,8 @@ class BunnyStreamPlayer @JvmOverloads constructor(
         }
     }
 
-    override fun playVideo(videoId: String, libraryId: Long?, videoTitle: String, refererValue: String?, isPortrait: Boolean, isScreenshotProtectionEnabled: Boolean) {
+    override fun playVideo(videoId: String, libraryId: Long?, videoTitle: String, refererValue: String?, isPortrait: Boolean, isScreenshotProtectionEnabled: Boolean, cacheKey: String?) {
+
         Log.d(TAG, "playVideo videoId=$videoId, isPortrait=$isPortrait, isScreenshotProtectionEnabled=$isScreenshotProtectionEnabled")
 
         currentVideoId = videoId
@@ -328,8 +329,8 @@ class BunnyStreamPlayer @JvmOverloads constructor(
             // Capture refererValue for use in the lambda
             val capturedRefererValue = refererValue
             scope!!.launch {
-
-                val video: VideoModel
+                var video: VideoModel? = null
+                var settings: arrow.core.Either<String, PlayerSettings>? = null
 
                 try {
                     video = withContext(Dispatchers.IO) {
@@ -338,19 +339,27 @@ class BunnyStreamPlayer @JvmOverloads constructor(
                             videoId
                         ).video?.toVideoModel()!!
                     }
-                    Log.d(TAG, "video=$video")
+                    settings = BunnyStreamApi.getInstance()
+                        .fetchPlayerSettings(providedLibraryId, videoId, capturedRefererValue)
                 } catch (e: Exception) {
-                    Log.w(TAG, "Error fetching video: $e")
-                    return@launch
+                    Log.w(TAG, "Error fetching video/settings: $e")
+                    if (cacheKey != null) {
+                         val meta = net.bunny.bunnystreamplayer.util.BunnyCacheManager.loadMetadata(context, cacheKey, VideoModel::class.java, PlayerSettings::class.java)
+                         if (meta != null) {
+                             video = meta.first as VideoModel
+                             settings = arrow.core.Either.Right(meta.second as PlayerSettings)
+                         }
+                    }
                 }
 
-                val settings = BunnyStreamApi.getInstance()
-                    .fetchPlayerSettings(providedLibraryId, videoId, capturedRefererValue)
+                if (video == null || settings == null) {
+                     return@launch
+                }
 
-                settings.fold(
+                settings!!.fold(
                     ifLeft = {
                         initializeVideo(
-                            video, PlayerSettings(
+                            video!!, PlayerSettings(
                                 thumbnailUrl = "",
                                 controls = "",
                                 keyColor = 0,
@@ -376,11 +385,12 @@ class BunnyStreamPlayer @JvmOverloads constructor(
                                 videoUrl = "",
                                 seekPath = "",
                                 captionsPath = ""
-                            ), capturedRefererValue
+                            ), capturedRefererValue,
+                            cacheKey
                         )
                         playerView.showError(it)
                     },
-                    ifRight = { initializeVideo(video, it, capturedRefererValue) }
+                    ifRight = { initializeVideo(video!!, it, capturedRefererValue, cacheKey) }
                 )
             }
         }
@@ -394,7 +404,8 @@ class BunnyStreamPlayer @JvmOverloads constructor(
         pendingJob = null
     }
 
-    override fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?, refererValue: String?, isPortrait: Boolean, isScreenshotProtectionEnabled: Boolean) {
+    override fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?, refererValue: String?, isPortrait: Boolean, isScreenshotProtectionEnabled: Boolean, cacheKey: String?) {
+
         Log.d(TAG, "playVideoWithToken videoId=$videoId, token=$token, expires=$expires refervalue=${refererValue}, isPortrait=$isPortrait, isScreenshotProtectionEnabled=$isScreenshotProtectionEnabled")
 
         currentVideoId = videoId
@@ -422,8 +433,8 @@ class BunnyStreamPlayer @JvmOverloads constructor(
             // Capture refererValue for use in the lambda
             val capturedRefererValue = refererValue
             scope!!.launch {
-
-                val video: VideoModel
+                var video: VideoModel? = null
+                var settings: arrow.core.Either<String, PlayerSettings>? = null
 
                 try {
                     video = withContext(Dispatchers.IO) {
@@ -434,19 +445,27 @@ class BunnyStreamPlayer @JvmOverloads constructor(
                             expires = expires
                         ).video?.toVideoModel()!!
                     }
-                    Log.d(TAG, "video=$video")
+                    settings = BunnyStreamApi.getInstance()
+                        .fetchPlayerSettingsWithToken(providedLibraryId, videoId, token, expires, capturedRefererValue)
                 } catch (e: Exception) {
-                    Log.w(TAG, "Error fetching video: $e")
-                    return@launch
+                     Log.w(TAG, "Error fetching video/settings: $e")
+                    if (cacheKey != null) {
+                         val meta = net.bunny.bunnystreamplayer.util.BunnyCacheManager.loadMetadata(context, cacheKey, VideoModel::class.java, PlayerSettings::class.java)
+                         if (meta != null) {
+                             video = meta.first as VideoModel
+                             settings = arrow.core.Either.Right(meta.second as PlayerSettings)
+                         }
+                    }
                 }
 
-                val settings = BunnyStreamApi.getInstance()
-                    .fetchPlayerSettingsWithToken(providedLibraryId, videoId, token, expires, capturedRefererValue)
+                if (video == null || settings == null) {
+                     return@launch
+                }
 
-                settings.fold(
+                settings!!.fold(
                     ifLeft = {
                         initializeVideo(
-                            video, PlayerSettings(
+                            video!!, PlayerSettings(
                                 thumbnailUrl = "",
                                 controls = "",
                                 keyColor = 0,
@@ -472,11 +491,12 @@ class BunnyStreamPlayer @JvmOverloads constructor(
                                 videoUrl = "",
                                 seekPath = "",
                                 captionsPath = ""
-                            ), capturedRefererValue
+                            ), capturedRefererValue,
+                            cacheKey
                         )
                         playerView.showError(it)
                     },
-                    ifRight = { initializeVideo(video, it, capturedRefererValue) }
+                    ifRight = { initializeVideo(video!!, it, capturedRefererValue, cacheKey) }
                 )
             }
         }
@@ -502,7 +522,7 @@ class BunnyStreamPlayer @JvmOverloads constructor(
         // Auto-save will start automatically via lifecycle observer
     }
 
-    private suspend fun initializeVideo(video: VideoModel, playerSettings: PlayerSettings, refererValue: String?) {
+    private suspend fun initializeVideo(video: VideoModel, playerSettings: PlayerSettings, refererValue: String?, cacheKey: String?) {
         playerView.showPreviewThumbnail(playerSettings.thumbnailUrl)
 
         var retentionData: Map<Int, Int> = mutableMapOf()
@@ -521,7 +541,7 @@ class BunnyStreamPlayer @JvmOverloads constructor(
             }
         }
 
-        bunnyPlayer.playVideo(binding.playerView, video, retentionData, playerSettings, refererValue)
+        bunnyPlayer.playVideo(binding.playerView, video, retentionData, playerSettings, refererValue, cacheKey)
         playerView.bunnyPlayer = bunnyPlayer
 
         // Start auto-save after video starts playing
@@ -594,11 +614,18 @@ class BunnyStreamPlayer @JvmOverloads constructor(
         val minutes = (totalSeconds % 3600) / 60
         val seconds = totalSeconds % 60
 
+
+
+
         return if (hours > 0) {
             String.format("%d:%02d:%02d", hours, minutes, seconds)
         } else {
             String.format("%d:%02d", minutes, seconds)
         }
+    }
+
+    override fun downloadCurrentVideo(cacheKey: String) {
+        bunnyPlayer.downloadCurrentVideo(cacheKey)
     }
 
     fun VideoPlayDataModelVideo.toVideoModel(): VideoModel = VideoModel(
