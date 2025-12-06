@@ -12,6 +12,13 @@ class PlaybackSpeedManager {
         private const val TAG = "PlaybackSpeedManager"
         val DEFAULT_SPEEDS = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
         val ALLOWED_SPEED_RANGE = 0.25f..4.0f
+        private const val SPEED_HALF = 0.5f
+        private const val SPEED_THREE_QUARTER = 0.75f
+        private const val SPEED_NORMAL = 1.0f
+        private const val SPEED_ONE_QUARTER = 1.25f
+        private const val SPEED_ONE_HALF = 1.5f
+        private const val SPEED_ONE_THREE_QUARTER = 1.75f
+        private const val SPEED_DOUBLE = 2.0f
     }
 
     fun parsePlaybackSpeeds(speedString: String?): List<Float> {
@@ -45,13 +52,13 @@ class PlaybackSpeedManager {
 
     fun getSpeedDisplayText(speed: Float): String {
         return when (speed) {
-            0.5f -> "0.5× (Slower)"
-            0.75f -> "0.75×"
-            1.0f -> "Normal"
-            1.25f -> "1.25×"
-            1.5f -> "1.5×"
-            1.75f -> "1.75×"
-            2.0f -> "2× (Faster)"
+            SPEED_HALF -> "0.5× (Slower)"
+            SPEED_THREE_QUARTER -> "0.75×"
+            SPEED_NORMAL -> "Normal"
+            SPEED_ONE_QUARTER -> "1.25×"
+            SPEED_ONE_HALF -> "1.5×"
+            SPEED_ONE_THREE_QUARTER -> "1.75×"
+            SPEED_DOUBLE -> "2× (Faster)"
             else -> "${speed}×"
         }
     }

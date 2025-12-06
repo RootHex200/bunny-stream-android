@@ -15,7 +15,6 @@ class TusUploadRequest(
     private val pauseListener: (Boolean) -> Unit,
 ) : UploadRequest(libraryId, videoId) {
 
-    @Suppress("PrintStackTrace")
     override suspend fun cancel() {
         withContext(NonCancellable) {
             Log.d("TusUploadRequest", "cancel")
@@ -23,8 +22,7 @@ class TusUploadRequest(
                 pauseListener(false)
                 uploader.finish()
             } catch (e: Exception) {
-                Log.e("TusUploadRequest", "cancel exception: ${e.message}")
-                e.printStackTrace()
+                Log.e("TusUploadRequest", "cancel exception: ${e.message}", e)
             }
             listener.onUploadCancelled(videoId)
         }
@@ -35,8 +33,7 @@ class TusUploadRequest(
         try {
             pauseListener(true)
         } catch (e: Exception){
-            Log.e("TusUploadRequest", "pause exception: ${e.message}")
-            e.printStackTrace()
+            Log.e("TusUploadRequest", "pause exception: ${e.message}", e)
         }
     }
 
@@ -45,8 +42,7 @@ class TusUploadRequest(
         try {
             pauseListener(false)
         } catch (e: Exception){
-            Log.e("TusUploadRequest", "pause exception: ${e.message}")
-            e.printStackTrace()
+            Log.e("TusUploadRequest", "pause exception: ${e.message}", e)
         }
     }
 }

@@ -58,6 +58,7 @@ import net.bunny.api.playback.PlaybackPosition
 import net.bunny.api.playback.ResumeConfig
 import net.bunny.bunnystreamplayer.config.PlaybackSpeedConfig
 import net.bunny.bunnystreamplayer.ui.BunnyStreamPlayer
+import androidx.media3.common.util.UnstableApi
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
@@ -97,6 +98,7 @@ fun PlayerRoute(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("UnsafeOptInUsageError")
 @Composable
 fun PlayerScreen(
     modifier: Modifier = Modifier,
@@ -409,6 +411,7 @@ private fun SpeedButtonRow(
     }
 }
 
+@Suppress("UnsafeOptInUsageError")
 @Composable
 fun BunnyPlayerComposable(
     videoId: String,

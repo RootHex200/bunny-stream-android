@@ -35,6 +35,7 @@ class TusUploaderService(
 
     companion object {
         private const val TAG = "TusUploaderService"
+        private const val PAUSE_DELAY_MS = 250L
     }
 
     private val supervisorJob = SupervisorJob()
@@ -92,7 +93,7 @@ class TusUploaderService(
                     if (!isPaused.load()) {
                         chunkNumber = uploader.uploadChunk()
                     } else {
-                        delay(250)
+                        delay(PAUSE_DELAY_MS)
                     }
                     if (isCanceled.load()) {
                         Log.d(TAG, "upload cancelled")
@@ -104,16 +105,14 @@ class TusUploaderService(
                 uploader.finish()
                 Log.d(TAG, "upload done")
                 listener.onUploadDone(videoId)
+            } catch (e: CancellationException) {
+                Log.d(TAG, "upload cancelled")
+                isCanceled.store(true)
+                listener.onUploadCancelled(videoId)
             } catch (e: Exception) {
-                if(e is CancellationException){
-                    Log.d(TAG, "upload cancelled")
-                    isCanceled.store(true)
-                    listener.onUploadCancelled(videoId)
-                } else {
-                    Log.w(TAG, "error uploading: ${e.message}")
-                    e.printStackTrace()
-                    listener.onUploadError(UploadError.UnknownError(e.message ?: e.toString()), videoId)
-                }
+                Log.w(TAG, "error uploading: ${e.message}")
+                e.printStackTrace()
+                listener.onUploadError(UploadError.UnknownError(e.message ?: e.toString()), videoId)
             }
         }
 

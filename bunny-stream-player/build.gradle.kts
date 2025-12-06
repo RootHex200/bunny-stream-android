@@ -89,6 +89,8 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     // https://github.com/material-components/material-components-android
     implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.media3:media3-common:1.6.0")
+
 
     // AndroidX Media3
     // https://developer.android.com/jetpack/androidx/releases/media3

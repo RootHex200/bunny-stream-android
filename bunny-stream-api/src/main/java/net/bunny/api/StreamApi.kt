@@ -41,7 +41,11 @@ interface StreamApi {
      */
     val progressRepository: ProgressRepository
 
-    suspend fun fetchPlayerSettings(libraryId: Long, videoId: String, refererValue: String? = null): Either<String, PlayerSettings>
+    suspend fun fetchPlayerSettings(
+        libraryId: Long,
+        videoId: String,
+        refererValue: String? = null
+    ): Either<String, PlayerSettings>
     
     /**
      * Fetches player settings with token-based authentication
@@ -52,5 +56,11 @@ interface StreamApi {
      * @param refererValue Custom referer value for API calls, null to use default
      * @return Either error message or player settings
      */
-    suspend fun fetchPlayerSettingsWithToken(libraryId: Long, videoId: String, token: String?, expires: Long?, refererValue: String? = null): Either<String, PlayerSettings>
+    suspend fun fetchPlayerSettingsWithToken(
+        libraryId: Long,
+        videoId: String,
+        token: String?,
+        expires: Long?,
+        refererValue: String? = null
+    ): Either<String, PlayerSettings>
 }

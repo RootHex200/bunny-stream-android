@@ -35,7 +35,7 @@ class DefaultProgressRepository(
         withContext(coroutineDispatcher) {
             try {
                 val endpoint = "${BunnyStreamApi.baseApi}/library/$libraryId/videos/$videoId/progress"
-                val response = httpClient.get(endpoint)
+                httpClient.get(endpoint)
                 // Parse response to get position
                 Either.Right(0L) // Replace with actual parsing
             } catch (e: Exception) {

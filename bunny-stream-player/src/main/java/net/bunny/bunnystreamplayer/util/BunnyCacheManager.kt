@@ -1,12 +1,14 @@
 package net.bunny.bunnystreamplayer.util
 
 import android.content.Context
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.DatabaseProvider
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import java.io.File
 
+@UnstableApi
 object BunnyCacheManager {
     private const val CACHE_SIZE_BYTES = 500 * 1024 * 1024L // 500MB
     private var simpleCache: SimpleCache? = null

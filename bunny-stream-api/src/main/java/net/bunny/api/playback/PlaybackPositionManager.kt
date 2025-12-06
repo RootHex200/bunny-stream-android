@@ -50,6 +50,8 @@ class DefaultPlaybackPositionManager(
     companion object {
         private const val PREF_NAME = "bunny_resume_positions"
         private const val KEY_POSITIONS = "all_positions"
+        private const val MAX_POSITIONS = 100
+        private const val MILLIS_IN_DAY = 24 * 60 * 60 * 1000
     }
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -83,9 +85,9 @@ class DefaultPlaybackPositionManager(
                 positions.add(playbackPosition)
                 
                 // Keep only last 100 positions
-                if (positions.size > 100) {
+                if (positions.size > MAX_POSITIONS) {
                     positions.sortByDescending { it.timestamp }
-                    positions.subList(100, positions.size).clear()
+                    positions.subList(MAX_POSITIONS, positions.size).clear()
                 }
                 
                 // Save to preferences
@@ -182,7 +184,7 @@ class DefaultPlaybackPositionManager(
     }
 
     private fun isPositionValid(position: PlaybackPosition): Boolean {
-        val daysSinceWatched = (System.currentTimeMillis() - position.timestamp) / (24 * 60 * 60 * 1000)
+        val daysSinceWatched = (System.currentTimeMillis() - position.timestamp) / MILLIS_IN_DAY
         return daysSinceWatched <= config.retentionDays
     }
 

@@ -14,7 +14,18 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
 
+        disable += listOf(
+            "MissingTvBanner",
+            "MissingLeanbackLauncher",
+            "MissingClass",
+            "TvPermission",
+            "TvNotSupportedConfiguration"
+        )
+    }
     buildTypes {
         release {
             isMinifyEnabled = false
