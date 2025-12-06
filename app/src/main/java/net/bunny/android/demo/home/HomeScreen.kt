@@ -90,7 +90,7 @@ fun HomeScreenRoute(
     navigateToVideoList: () -> Unit,
     navigateToUpload: () -> Unit,
     navigateToStreaming: () -> Unit,
-    navigateToPlayer: (String, Long, String?, Long?) -> Unit,
+    navigateToPlayer: (String, Long, String?, Long?, String?) -> Unit,
     navigateToResumeSettings: () -> Unit,
     navigateToResumeManagement: () -> Unit,
     modifier: Modifier = Modifier,
@@ -130,9 +130,12 @@ fun HomeScreenRoute(
                 }
             }
         },
-        onPlayDirect = { videoId, libraryId, token, expires ->
+        onPlayDirect = { videoId, libraryId, token, expires, cacheKey ->
             showDialog = false
-            navigateToPlayer(videoId, libraryId.toLong(), token, expires)
+            val libraryIdLong = libraryId.toLongOrNull() ?: 0L 
+            if (libraryIdLong != 0L) {
+                 navigateToPlayer(videoId, libraryIdLong, token, expires, cacheKey)
+            }
         },
         onDismiss = {
             showDialog = false
@@ -146,7 +149,7 @@ fun HomeScreenContent(
     modifier: Modifier,
     showDialog: Boolean = false,
     onOptionClick: (HomeOption) -> Unit,
-    onPlayDirect: (String, String, String?, Long?) -> Unit,
+    onPlayDirect: (String, String, String?, Long?, String?) -> Unit,
     onDismiss: () -> Unit
 ) {
     Scaffold(
@@ -172,8 +175,8 @@ fun HomeScreenContent(
         if (showDialog) {
             EnterVideoIdDialog(
                 initialValue = "",
-                onPlay = { videoId, libraryId,token,expire ->
-                    onPlayDirect(videoId, libraryId,token,expire)     // fire the navigation/callback
+                onPlay = { videoId, libraryId,token,expire, cacheKey ->
+                    onPlayDirect(videoId, libraryId,token,expire, cacheKey)     // fire the navigation/callback
                 },
                 onDismiss = {
                     onDismiss()
@@ -292,13 +295,14 @@ fun OptionsCategory(title: String) {
 @Composable
 private fun EnterVideoIdDialog(
     initialValue: String = "",
-    onPlay: (String, String, String?, Long?) -> Unit,
+    onPlay: (String, String, String?, Long?, String?) -> Unit,
     onDismiss: () -> Unit
 ) {
     var videoId by remember { mutableStateOf(initialValue) }
     var libraryId by remember { mutableStateOf(initialValue) }
     var token by remember { mutableStateOf("") }
     var expires by remember { mutableStateOf("") }
+    var cacheKey by remember { mutableStateOf("") }
     var useTokenAuth by remember { mutableStateOf(false) }
 
     AlertDialog(
@@ -370,6 +374,15 @@ private fun EnterVideoIdDialog(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                TextField(
+                    value = cacheKey,
+                    onValueChange = { cacheKey = it },
+                    label = { Text("Cache Key (Optional)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         },
         confirmButton = {
@@ -377,7 +390,8 @@ private fun EnterVideoIdDialog(
                 onClick = { 
                     val tokenValue = if (useTokenAuth && token.isNotBlank()) token else null
                     val expiresValue = if (useTokenAuth && expires.isNotBlank()) expires.toLongOrNull() else null
-                    onPlay(videoId, libraryId, tokenValue, expiresValue)
+                    val cacheKeyValue = if (cacheKey.isNotBlank()) cacheKey else null
+                    onPlay(videoId, libraryId, tokenValue, expiresValue, cacheKeyValue)
                 }
             ) {
                 Text("Play", color = MaterialTheme.colorScheme.primary)
@@ -401,7 +415,7 @@ fun OptionsScreenPreview() {
         HomeScreenContent(
             modifier = Modifier.fillMaxSize(),
             onOptionClick = {},
-            onPlayDirect = { videoId, libraryId,token,expire ->
+            onPlayDirect = { videoId, libraryId,token,expire, cacheKey ->
             },
             onDismiss = { },
         )
