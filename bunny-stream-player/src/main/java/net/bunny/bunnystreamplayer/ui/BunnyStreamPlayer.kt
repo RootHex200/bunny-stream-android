@@ -34,9 +34,7 @@ import net.bunny.bunnystreamplayer.util.ScreenshotProtectionUtil
 import net.bunny.player.databinding.ViewBunnyVideoPlayerBinding
 import org.openapitools.client.models.VideoModel
 import org.openapitools.client.models.VideoPlayDataModelVideo
-import androidx.media3.common.util.UnstableApi
 
-@UnstableApi
  class BunnyStreamPlayer @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -301,7 +299,6 @@ import androidx.media3.common.util.UnstableApi
         }
     }
 
-    @UnstableApi
     override fun playVideo(videoId: String, libraryId: Long?, videoTitle: String, refererValue: String?, isPortrait: Boolean, isScreenshotProtectionEnabled: Boolean, cacheKey: String?) {
 
         Log.d(TAG, "playVideo videoId=$videoId, isPortrait=$isPortrait, isScreenshotProtectionEnabled=$isScreenshotProtectionEnabled")
@@ -406,7 +403,6 @@ import androidx.media3.common.util.UnstableApi
         pendingJob = null
     }
 
-    @OptIn(UnstableApi::class)
     override fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?, refererValue: String?, isPortrait: Boolean, isScreenshotProtectionEnabled: Boolean, cacheKey: String?) {
 
         Log.d(TAG, "playVideoWithToken videoId=$videoId, token=$token, expires=$expires refervalue=${refererValue}, isPortrait=$isPortrait, isScreenshotProtectionEnabled=$isScreenshotProtectionEnabled")
