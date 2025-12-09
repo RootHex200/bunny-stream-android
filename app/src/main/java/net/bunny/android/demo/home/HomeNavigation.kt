@@ -23,10 +23,10 @@ fun NavGraphBuilder.homeScreen(
     navigateToVideoList: () -> Unit,
     navigateToUpload: () -> Unit,
     navigateToStreaming: () -> Unit,
-     navigateToResumeSettings: () -> Unit,
+    navigateToResumeSettings: () -> Unit,
     navigateToResumeManagement: () -> Unit,
     modifier: Modifier = Modifier,
-    navigateToPlayer:  (String, Long, String?, Long?) -> Unit,
+    navigateToPlayer:  (String, Long, String?, Long?, String?) -> Unit,
 ) {
     composable(
         route = HOME_ROUTE,

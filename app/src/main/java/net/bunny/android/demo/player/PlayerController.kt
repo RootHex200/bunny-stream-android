@@ -2,10 +2,12 @@ package net.bunny.android.demo.player
 
 import android.util.Log
 import net.bunny.bunnystreamplayer.ui.BunnyStreamPlayer
+import androidx.media3.common.util.UnstableApi
 
 /**
  * Controller to handle player operations including speed control
  */
+@Suppress("UnsafeOptInUsageError")
 class PlayerController(private val player: BunnyStreamPlayer) {
     
     companion object {
@@ -131,4 +133,11 @@ class PlayerController(private val player: BunnyStreamPlayer) {
         }
     }
     
+    fun downloadVideo(cacheKey: String) {
+        player.downloadCurrentVideo(cacheKey)
+    }
+
+    fun isFileExist(cacheKey: String): Boolean{
+        return player.isDownloadFileExist(cacheKey)
+    }
 }

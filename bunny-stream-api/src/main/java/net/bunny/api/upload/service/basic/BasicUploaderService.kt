@@ -78,15 +78,13 @@ class BasicUploaderService(
                     }
                 }
 
+            } catch (e: CancellationException) {
+                Log.d(TAG, "upload cancelled")
+                listener.onUploadCancelled(videoId)
             } catch (e: Exception) {
-                if(e is CancellationException){
-                    Log.d(TAG, "upload cancelled")
-                    listener.onUploadCancelled(videoId)
-                } else {
-                    Log.w(TAG, "error uploading: ${e.message}")
-                    e.printStackTrace()
-                    listener.onUploadError(UploadError.UnknownError(e.message ?: e.toString()), videoId)
-                }
+                Log.w(TAG, "error uploading: ${e.message}")
+                e.printStackTrace()
+                listener.onUploadError(UploadError.UnknownError(e.message ?: e.toString()), videoId)
             }
         }
 

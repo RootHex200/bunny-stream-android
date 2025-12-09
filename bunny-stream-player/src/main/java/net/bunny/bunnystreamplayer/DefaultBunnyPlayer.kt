@@ -1,8 +1,11 @@
 package net.bunny.bunnystreamplayer
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.graphics.Color
 import android.net.Uri
 import android.util.Log
@@ -22,6 +25,12 @@ import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.TransferListener
+import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.datasource.cache.CacheDataSink
+import androidx.media3.datasource.cache.CacheWriter
+import androidx.media3.exoplayer.hls.offline.HlsDownloader
+import androidx.core.app.NotificationCompat
+import net.bunny.bunnystreamplayer.util.BunnyCacheManager
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -75,6 +84,9 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
         private const val SEEK_SKIP_MILLIS = 10 * 1000
         private const val THUMBNAILS_PER_IMAGE = 36
 
+        private const val NOTIFICATION_CHANNEL_ID = "bunny_download_channel"
+        private const val NOTIFICATION_ID = 1
+
         @Volatile
         private var instance: BunnyPlayer? = null
 
@@ -115,6 +127,8 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
     override var positionManager: PlaybackPositionManager? = null
     private var resumePositionListener: ResumePositionListener? = null
     private val coroutineScope = CoroutineScope(Dispatchers.Main)
+
+    private val notificationManager = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     private var autoSaveJob: Job? = null
     private val autoSaveInterval = 10_000L // 10 seconds
@@ -226,10 +240,11 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
     }
 
     override var seekThumbnail: SeekThumbnail? = null
-
     override var playerSettings: PlayerSettings? = null
 
+
     init {
+        createNotificationChannel()
         // Only initialize Cast if it's available
         if (AppCastContext.isAvailable()) {
             try {
@@ -264,6 +279,19 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
         } else {
             Log.d(TAG, "Cast framework not available, continuing without Cast support")
             castPlayer = null
+        }
+    }
+
+    private fun createNotificationChannel() {
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                NOTIFICATION_CHANNEL_ID,
+                "Download Notifications",
+                NotificationManager.IMPORTANCE_LOW
+            )
+            channel.description = "Shows download progress for videos"
+            notificationManager.createNotificationChannel(channel)
         }
     }
 
@@ -433,9 +461,12 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
         video: VideoModel,
         retentionData: Map<Int, Int>,
         playerSettings: PlayerSettings,
-        refererValue: String?
+        refererValue: String?,
+        cacheKey: String?
     ) {
-        Log.d(TAG, "playVideo(video=$video, retentionData=$retentionData, playerSettings=$playerSettings, refererValue=$refererValue)")
+        Log.d(TAG, "playVideo(video=$video, retentionData=$retentionData, playerSettings=$playerSettings, refererValue=$refererValue, cacheKey=$cacheKey)")
+        this.currentVideo = video
+        this.playerSettings = playerSettings
 
         // Save position of previous video before switching
         saveCurrentPosition()
@@ -485,9 +516,23 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
             .setUserAgent(Util.getUserAgent(context, "BunnyStreamPlayer"))
             .setTransferListener(transferListener)
 
+        val dataSourceFactory: DataSource.Factory = if (cacheKey != null) {
+            val cache = BunnyCacheManager.getSimpleCache(context)
+            val cacheSink = CacheDataSink.Factory()
+                .setCache(cache)
+
+            CacheDataSource.Factory()
+                .setCache(cache)
+                .setCacheWriteDataSinkFactory(cacheSink)
+                .setUpstreamDataSourceFactory(httpFactory)
+                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+        } else {
+            httpFactory
+        }
+
         // Create media source factory without setDrmSessionManagerProvider
         val mediaSourceFactory = DefaultMediaSourceFactory(context)
-            .setDataSourceFactory(httpFactory)
+            .setDataSourceFactory(dataSourceFactory)
 
         // Set up subtitle tracks if available
         val subtitleConfigs = video.captions?.map { cap ->
@@ -665,6 +710,7 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
         }
     }
 
+
     override fun clearProgress() {
         currentVideoId?.let { videoId ->
             currentLibraryId?.let { libraryId ->
@@ -796,6 +842,124 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
 
     override fun getVideoQualityOptions(): VideoQualityOptions? {
         return getAvailableVideoQualityOptions()
+    }
+
+    override fun downloadCurrentVideo(cacheKey: String) {
+        val url = playerSettings?.videoUrl ?: return
+        val cache = BunnyCacheManager.getSimpleCache(context)
+        val dataSpec = DataSpec.Builder()
+            .setUri(Uri.parse(url))
+            .build()
+        
+        val upstreamFactory = DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+            
+        val cacheDataSource = CacheDataSource.Factory()
+            .setCache(cache)
+            .setUpstreamDataSourceFactory(upstreamFactory)
+            .createDataSource()
+
+        // Run in background using GlobalScope since download should continue even if user navigates away
+        // Ideally should use a Service or WorkManager for robust downloads, but GlobalScope fits for now
+        
+        val video = currentVideo
+        playerSettings?.let { settings ->
+             if (video != null) {
+                 BunnyCacheManager.saveMetadata(context, cacheKey, video, settings)
+             }
+        }
+
+        GlobalScope.launch(Dispatchers.IO) {
+            try {
+                if (url.endsWith(".m3u8") || url.contains("m3u8")) {
+                    val notificationBuilder = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+                        .setContentTitle("Downloading Video")
+                        .setContentText("Download in progress")
+                        .setSmallIcon(android.R.drawable.stat_sys_download) // Replace with your own icon
+                        .setOngoing(true)
+                        .setProgress(100, 0, false)
+
+                    // On Android 8.0 and higher, you must create a notification channel.
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        val channel = NotificationChannel(NOTIFICATION_CHANNEL_ID, "Downloads", NotificationManager.IMPORTANCE_LOW)
+                        notificationManager.createNotificationChannel(channel)
+                    }
+
+                    // Use HlsDownloader for HLS content
+                    val mediaItem = MediaItem.fromUri(url)
+                    val cacheDataSourceFactory = CacheDataSource.Factory()
+                        .setCache(cache)
+                        .setCacheWriteDataSinkFactory(CacheDataSink.Factory().setCache(cache))
+                        .setUpstreamDataSourceFactory(upstreamFactory)
+
+                    val downloader = HlsDownloader(mediaItem, cacheDataSourceFactory)
+
+                    // Show initial notification
+                    notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
+
+                    downloader.download { _, _, percent ->
+                        Log.d(TAG, "HLS Download progress: $percent%")
+                        notificationBuilder.setProgress(100, percent.toInt(), false)
+                        var isComplete = false
+                        if (percent >= 100) {
+                            isComplete = true
+                            notificationBuilder.setContentText("Download complete")
+                                .setOngoing(false)
+                                .setProgress(0, 0, false)
+                        }
+                        // Use a coroutine on the Main thread to show the notification
+                        // as notificationManager should be accessed from the main thread.
+                        launch(Dispatchers.Main) {
+                            notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
+                            if (isComplete) {
+                                // Keep the "complete" notification for a few seconds before dismissing
+                                delay(5000)
+                                notificationManager.cancel(NOTIFICATION_ID)
+                            }
+                        }
+                    }
+
+                 } else {
+                     // Use CacheWriter for other content (MP4, etc)
+                     val cacheDataSource = CacheDataSource.Factory()
+                        .setCache(cache)
+                        .setUpstreamDataSourceFactory(upstreamFactory)
+                        .createDataSource()
+                        
+                     val cacheWriter = CacheWriter(
+                        cacheDataSource,
+                        dataSpec,
+                        null // buffer
+                    ) { requestLength, bytesCached, newBytesCached ->
+                        // This part doesn't have a notification implementation yet.
+                        // If needed, it would be similar to the HLS part.
+                        val percentage = if (requestLength == C.LENGTH_UNSET.toLong() || requestLength == 0L) {
+                            -1 // Indeterminate
+                        } else {
+                            ((bytesCached * 100) / requestLength).toInt()
+                        }
+
+                        // It's good practice to log here to see if this branch is ever taken.
+                        if (percentage >= 0) {
+                            Log.d(TAG, "Download progress (non-HLS): $percentage%")
+                        } else if (newBytesCached > 0) {
+                            Log.d(TAG, "Downloaded $bytesCached bytes (total size unknown)")
+                        }
+
+                        // If notifications were needed for non-HLS, you would add the logic here,
+                        // ensuring UI calls like notificationManager.notify are on the main thread.
+                        // For example:
+                        // launch(Dispatchers.Main) { /* update notification */ }
+
+                    }
+                    cacheWriter.cache()
+                }
+
+                Log.d(TAG, "Download complete for $cacheKey")
+            } catch (e: Exception) {
+                Log.e(TAG, "Download failed", e)
+            }
+        }
     }
 
     override fun getAudioTrackOptions(): AudioTrackInfoOptions? {

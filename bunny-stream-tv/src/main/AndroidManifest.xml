@@ -2,9 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- TV-specific features -->
-    <uses-feature
-        android:name="android.software.leanback"
-        android:required="false" />
+<!--    <uses-feature-->
+<!--        android:name="android.software.leanback"-->
+<!--        android:required="false" />-->
     <uses-feature
         android:name="android.hardware.touchscreen"
         android:required="false" />
@@ -23,10 +23,10 @@
             android:screenOrientation="landscape" />
 
         <!-- TV Browse Activity (optional, for full TV experience) -->
-        <activity
+        <!-- <activity
             android:name=".leanback.BunnyTVBrowseActivity"
             android:theme="@style/Theme.Leanback.Browse"
-            android:exported="false" />
+            android:exported="false" /> -->
     </application>
 
 </manifest>

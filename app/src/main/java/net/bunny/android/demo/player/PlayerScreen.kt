@@ -58,6 +58,7 @@ import net.bunny.api.playback.PlaybackPosition
 import net.bunny.api.playback.ResumeConfig
 import net.bunny.bunnystreamplayer.config.PlaybackSpeedConfig
 import net.bunny.bunnystreamplayer.ui.BunnyStreamPlayer
+import androidx.media3.common.util.UnstableApi
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
@@ -68,6 +69,7 @@ fun PlayerRoute(
     libraryId: Long?,
     token: String? = null,
     expires: Long? = null,
+    cacheKey: String? = null,
     isScreenshotProtectionEnabled: Boolean = false,
     modifier: Modifier = Modifier,
     viewModel: PlayerViewModel = viewModel(),
@@ -80,6 +82,7 @@ fun PlayerRoute(
         libraryId = libraryId,
         token = token,
         expires = expires,
+        cacheKey = cacheKey,
         isScreenshotProtectionEnabled = isScreenshotProtectionEnabled,
         uiState,
         onBackClicked = { appState.navController.popBackStack() },
@@ -95,6 +98,7 @@ fun PlayerRoute(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("UnsafeOptInUsageError")
 @Composable
 fun PlayerScreen(
     modifier: Modifier = Modifier,
@@ -102,6 +106,7 @@ fun PlayerScreen(
     libraryId: Long?,
     token: String? = null,
     expires: Long? = null,
+    cacheKey: String? = null,
     isScreenshotProtectionEnabled: Boolean = false,
     uiState: VideoUiState,
     onBackClicked: () -> Unit,
@@ -146,6 +151,7 @@ fun PlayerScreen(
                 libraryId = libraryId,
                 token = token,
                 expires = expires,
+                cacheKey = cacheKey,
                 isScreenshotProtectionEnabled = isScreenshotProtectionEnabled,
                 resumePosition = when (uiState) {
                     is VideoUiState.VideoUiLoaded -> uiState.resumePosition
@@ -176,6 +182,18 @@ fun PlayerScreen(
                     playerController?.setSpeed(speed)
                 }
             )
+
+            if (cacheKey!=null&& playerController?.isFileExist(cacheKey)==false) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = { playerController?.downloadVideo(cacheKey) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Text("Download for Offline")
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -393,12 +411,14 @@ private fun SpeedButtonRow(
     }
 }
 
+@Suppress("UnsafeOptInUsageError")
 @Composable
 fun BunnyPlayerComposable(
     videoId: String,
     libraryId: Long?,
     token: String? = null,
     expires: Long? = null,
+    cacheKey: String? = null,
     isScreenshotProtectionEnabled: Boolean = false,
     resumePosition: Long = 0L,
     onPlayerReady: (BunnyStreamPlayer) -> Unit = {},
@@ -452,10 +472,10 @@ fun BunnyPlayerComposable(
             update = {
                 if (token != null && expires != null) {
                     it.playVideoWithToken(
-                        videoId, libraryId, videoTitle = "", token, expires, refererValue = "https://sabitur.klasio.dev", isPortrait = true, isScreenshotProtectionEnabled = isScreenshotProtectionEnabled)
+                        videoId, libraryId, videoTitle = "", token, expires, refererValue = "https://sabitur.klasio.dev", isPortrait = true, isScreenshotProtectionEnabled = isScreenshotProtectionEnabled, cacheKey = cacheKey)
                 } else {
                     it.playVideo(
-                        videoId, libraryId, videoTitle = "", isPortrait = true, isScreenshotProtectionEnabled = isScreenshotProtectionEnabled)
+                        videoId, libraryId, videoTitle = "", refererValue = "https://sabitur.klasio.dev", isPortrait = true, isScreenshotProtectionEnabled = isScreenshotProtectionEnabled, cacheKey = cacheKey)
                 }
                 onPlayerReady(it)
             },

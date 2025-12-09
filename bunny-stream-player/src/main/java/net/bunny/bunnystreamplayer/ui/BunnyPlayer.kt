@@ -17,7 +17,7 @@ interface BunnyPlayer {
      * @param isPortrait If true, video will be displayed in portrait fullscreen mode, if false, landscape mode
      * @param isScreenshotProtectionEnabled If true, enables screenshot and screen recording protection
      */
-    fun playVideo(videoId: String, libraryId: Long?, videoTitle: String, refererValue: String? = null, isPortrait: Boolean = false, isScreenshotProtectionEnabled: Boolean = false)
+    fun playVideo(videoId: String, libraryId: Long?, videoTitle: String, refererValue: String? = null, isPortrait: Boolean = false, isScreenshotProtectionEnabled: Boolean = false, cacheKey: String? = null)
 
     /**
      * Plays a video with token-based authentication
@@ -31,7 +31,7 @@ interface BunnyPlayer {
      * @param isPortrait If true, video will be displayed in portrait fullscreen mode, if false, landscape mode
      * @param isScreenshotProtectionEnabled If true, enables screenshot and screen recording protection
      */
-    fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?, refererValue: String? = null, isPortrait: Boolean = false, isScreenshotProtectionEnabled: Boolean = false)
+    fun playVideoWithToken(videoId: String, libraryId: Long?, videoTitle: String, token: String?, expires: Long?, refererValue: String? = null, isPortrait: Boolean = false, isScreenshotProtectionEnabled: Boolean = false, cacheKey: String? = null)
 
     /**
      * Pauses video
@@ -42,4 +42,8 @@ interface BunnyPlayer {
      * Resumes playing video
      */
     fun play()
+
+    fun downloadCurrentVideo(cacheKey: String)
+
+    fun isDownloadFileExist(cacheKey: String): Boolean
 }

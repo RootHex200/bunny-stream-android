@@ -17,6 +17,7 @@ const val VIDEO_ID      = "videoId"
 const val LIBRARY_ID    = "libraryId"
 const val TOKEN         = "token"
 const val EXPIRES       = "expires"
+const val CACHE_KEY     = "cacheKey"
 
 // Helper function to check if running on TV
 private fun Context.isRunningOnTV(): Boolean {
@@ -28,8 +29,10 @@ fun NavController.navigateToPlayer(
     videoId: String,
     libraryId: Long?,
     videoTitle: String? = null,
+
     token: String? = null,
-    expires: Long? = null
+    expires: Long? = null,
+    cacheKey: String? = null
 ) {
     val context = this.context
 
@@ -48,7 +51,8 @@ fun NavController.navigateToPlayer(
             val libSegment = libraryId ?: -1L
             val tokenSegment = token?.let { URLEncoder.encode(it, "UTF-8") } ?: ""
             val expiresSegment = expires ?: -1L
-            navigate("$PLAYER_ROUTE/$encodedVideoId/$libSegment/$tokenSegment/$expiresSegment")
+            val cacheKeySegment = cacheKey?.let { URLEncoder.encode(it, "UTF-8") } ?: ""
+            navigate("$PLAYER_ROUTE/$encodedVideoId/$libSegment/$tokenSegment/$expiresSegment/$cacheKeySegment")
         }
     } else {
         // Use mobile player (existing navigation)
@@ -56,13 +60,14 @@ fun NavController.navigateToPlayer(
         val libSegment = libraryId ?: -1L
         val tokenSegment = token?.let { URLEncoder.encode(it, "UTF-8") } ?: ""
         val expiresSegment = expires ?: -1L
-        navigate("$PLAYER_ROUTE/$encodedVideoId/$libSegment/$tokenSegment/$expiresSegment")
+        val cacheKeySegment = cacheKey?.let { URLEncoder.encode(it, "UTF-8") } ?: ""
+        navigate("$PLAYER_ROUTE/$encodedVideoId/$libSegment/$tokenSegment/$expiresSegment/$cacheKeySegment")
     }
 }
 
 fun NavGraphBuilder.playerScreen(appState: AppState) {
     composable(
-        route = "$PLAYER_ROUTE/{$VIDEO_ID}/{$LIBRARY_ID}/{$TOKEN}/{$EXPIRES}",
+        route = "$PLAYER_ROUTE/{$VIDEO_ID}/{$LIBRARY_ID}/{$TOKEN}/{$EXPIRES}/{$CACHE_KEY}",
         arguments = listOf(
             navArgument(VIDEO_ID) {
                 type = NavType.StringType
@@ -81,6 +86,11 @@ fun NavGraphBuilder.playerScreen(appState: AppState) {
                 type = NavType.LongType
                 defaultValue = -1L
                 nullable = false
+            },
+            navArgument(CACHE_KEY) {
+                type = NavType.StringType
+                defaultValue = ""
+                nullable = false
             }
         )
     ) { backStack ->
@@ -90,6 +100,7 @@ fun NavGraphBuilder.playerScreen(appState: AppState) {
         val token     = backStack.arguments!!.getString(TOKEN)!!.takeIf { it.isNotEmpty() }
         val rawExpires = backStack.arguments!!.getLong(EXPIRES)
         val expires   = rawExpires.takeIf { it != -1L }
-        PlayerRoute(appState, videoId, libraryId, token, expires)
+        val cacheKey = backStack.arguments!!.getString(CACHE_KEY)!!.takeIf { it.isNotEmpty() }
+        PlayerRoute(appState, videoId, libraryId, token, expires, cacheKey = cacheKey)
     }
 }
