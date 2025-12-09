@@ -183,7 +183,7 @@ fun PlayerScreen(
                 }
             )
 
-            if (cacheKey != null && playerController != null) {
+            if (cacheKey!=null&& playerController?.isFileExist(cacheKey)==false) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = { playerController?.downloadVideo(cacheKey) },
