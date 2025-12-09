@@ -710,6 +710,7 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
         }
     }
 
+
     override fun clearProgress() {
         currentVideoId?.let { videoId ->
             currentLibraryId?.let { libraryId ->

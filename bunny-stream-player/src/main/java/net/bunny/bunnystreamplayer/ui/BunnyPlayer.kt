@@ -44,4 +44,6 @@ interface BunnyPlayer {
     fun play()
 
     fun downloadCurrentVideo(cacheKey: String)
+
+    fun isDownloadFileExist(cacheKey: String): Boolean
 }

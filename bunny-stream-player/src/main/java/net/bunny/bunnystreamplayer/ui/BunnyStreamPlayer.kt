@@ -7,9 +7,11 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
+import androidx.annotation.OptIn
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -30,6 +32,7 @@ import net.bunny.bunnystreamplayer.model.PlayerIconSet
 import net.bunny.bunnystreamplayer.model.getSanitizedRetentionData
 import net.bunny.bunnystreamplayer.ui.fullscreen.FullScreenPlayerActivity
 import net.bunny.bunnystreamplayer.ui.widget.BunnyPlayerView
+import net.bunny.bunnystreamplayer.util.BunnyCacheManager
 import net.bunny.bunnystreamplayer.util.ScreenshotProtectionUtil
 import net.bunny.player.databinding.ViewBunnyVideoPlayerBinding
 import org.openapitools.client.models.VideoModel
@@ -623,6 +626,10 @@ import org.openapitools.client.models.VideoPlayDataModelVideo
         }
     }
 
+     @OptIn(UnstableApi::class)
+     override fun isDownloadFileExist(cacheKey: String): Boolean{
+         return BunnyCacheManager.getFileExist(context, cacheKey)
+     }
     override fun downloadCurrentVideo(cacheKey: String) {
         bunnyPlayer.downloadCurrentVideo(cacheKey)
     }

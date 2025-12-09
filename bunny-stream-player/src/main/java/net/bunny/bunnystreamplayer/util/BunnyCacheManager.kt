@@ -36,6 +36,11 @@ object BunnyCacheManager {
         }
     }
 
+    fun getFileExist(context: Context,cacheKey:String): Boolean{
+        val file = File(context.cacheDir, "meta_$cacheKey.json")
+        return file.exists()
+    }
+
     // Need to return concrete types. passing Class<T> is better but generic erasure.
     // For simplicity, returning wrapper object or Pair
     fun loadMetadata(context: Context, cacheKey: String, videoClass: Class<*>, settingsClass: Class<*>): Pair<Any, Any>? {
