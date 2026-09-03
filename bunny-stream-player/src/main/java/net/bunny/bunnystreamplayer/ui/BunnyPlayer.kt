@@ -43,7 +43,18 @@ interface BunnyPlayer {
      */
     fun play()
 
+    /**
+     * Downloads the currently playing video for offline viewing under
+     * [cacheKey].
+     */
     fun downloadCurrentVideo(cacheKey: String)
 
-    fun isDownloadFileExist(cacheKey: String): Boolean
+    /**
+     * True when [cacheKey] is downloaded and replayable with no network.
+     *
+     * Both halves matter: the media can be present while the play-config
+     * payload it needs for offline playback is missing, and that combination
+     * is not playable offline.
+     */
+    fun isDownloaded(cacheKey: String): Boolean
 }

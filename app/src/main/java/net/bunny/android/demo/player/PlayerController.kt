@@ -137,7 +137,7 @@ class PlayerController(private val player: BunnyStreamPlayer) {
         player.downloadCurrentVideo(cacheKey)
     }
 
-    fun isFileExist(cacheKey: String): Boolean{
-        return player.isDownloadFileExist(cacheKey)
+    fun isFileExist(cacheKey: String): Boolean {
+        return player.isDownloaded(cacheKey)
     }
 }
