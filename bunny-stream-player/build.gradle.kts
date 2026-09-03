@@ -23,7 +23,7 @@ android {
         singleVariant("release")
     }
     namespace = "net.bunny.player"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26
