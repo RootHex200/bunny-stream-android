@@ -11,6 +11,7 @@ import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.exoplayer.scheduler.PlatformScheduler
 import androidx.media3.exoplayer.scheduler.Scheduler
+import net.bunny.player.R
 
 /**
  * Foreground service that keeps downloads running while the app is
@@ -27,7 +28,7 @@ class BunnyDownloadService : DownloadService(
     FOREGROUND_NOTIFICATION_ID,
     DEFAULT_FOREGROUND_NOTIFICATION_UPDATE_INTERVAL,
     NOTIFICATION_CHANNEL_ID,
-    R_STRING_CHANNEL_NAME,
+    R.string.label_download_notification_channel_name,
     0,
 ) {
 
@@ -91,9 +92,6 @@ class BunnyDownloadService : DownloadService(
         const val NOTIFICATION_CHANNEL_ID = "bunny_download_channel"
         private const val FOREGROUND_NOTIFICATION_ID = 4021
         private const val JOB_ID = 4022
-
-        /** 0 means "no description resource", which the base class allows. */
-        private const val R_STRING_CHANNEL_NAME = 0
 
         fun ensureNotificationChannel(context: Context) {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
