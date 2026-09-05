@@ -30,7 +30,8 @@ import androidx.media3.datasource.cache.CacheDataSink
 import androidx.media3.datasource.cache.CacheWriter
 import androidx.media3.exoplayer.hls.offline.HlsDownloader
 import androidx.core.app.NotificationCompat
-import net.bunny.bunnystreamplayer.util.BunnyCacheManager
+import net.bunny.bunnystreamplayer.download.BunnyOfflineManager
+import net.bunny.bunnystreamplayer.util.BunnyDownloadStore
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -517,15 +518,16 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
             .setTransferListener(transferListener)
 
         val dataSourceFactory: DataSource.Factory = if (cacheKey != null) {
-            val cache = BunnyCacheManager.getSimpleCache(context)
-            val cacheSink = CacheDataSink.Factory()
-                .setCache(cache)
-
-            CacheDataSource.Factory()
-                .setCache(cache)
-                .setCacheWriteDataSinkFactory(cacheSink)
-                .setUpstreamDataSourceFactory(httpFactory)
-                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+            // Reads go through the encrypted store. When the video is already
+            // downloaded we deliberately pass no upstream, so a cache miss
+            // fails loudly instead of quietly fetching over the network — the
+            // prototype's FLAG_IGNORE_CACHE_ON_ERROR did the opposite and
+            // would have made "offline playback" silently online.
+            val offline = BunnyOfflineManager.isDownloaded(context, cacheKey)
+            BunnyDownloadStore.cacheDataSourceFactory(
+                context,
+                upstream = if (offline) null else httpFactory,
+            )
         } else {
             httpFactory
         }
@@ -845,121 +847,24 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
     }
 
     override fun downloadCurrentVideo(cacheKey: String) {
-        val url = playerSettings?.videoUrl ?: return
-        val cache = BunnyCacheManager.getSimpleCache(context)
-        val dataSpec = DataSpec.Builder()
-            .setUri(Uri.parse(url))
-            .build()
-        
-        val upstreamFactory = DefaultHttpDataSource.Factory()
-            .setAllowCrossProtocolRedirects(true)
-            
-        val cacheDataSource = CacheDataSource.Factory()
-            .setCache(cache)
-            .setUpstreamDataSourceFactory(upstreamFactory)
-            .createDataSource()
-
-        // Run in background using GlobalScope since download should continue even if user navigates away
-        // Ideally should use a Service or WorkManager for robust downloads, but GlobalScope fits for now
-        
-        val video = currentVideo
-        playerSettings?.let { settings ->
-             if (video != null) {
-                 BunnyCacheManager.saveMetadata(context, cacheKey, video, settings)
-             }
+        val settings = playerSettings
+        val url = settings?.videoUrl
+        if (url.isNullOrEmpty()) {
+            Log.w(TAG, "downloadCurrentVideo: no resolved playlist URL yet")
+            return
         }
 
-        GlobalScope.launch(Dispatchers.IO) {
-            try {
-                if (url.endsWith(".m3u8") || url.contains("m3u8")) {
-                    val notificationBuilder = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
-                        .setContentTitle("Downloading Video")
-                        .setContentText("Download in progress")
-                        .setSmallIcon(android.R.drawable.stat_sys_download) // Replace with your own icon
-                        .setOngoing(true)
-                        .setProgress(100, 0, false)
-
-                    // On Android 8.0 and higher, you must create a notification channel.
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        val channel = NotificationChannel(NOTIFICATION_CHANNEL_ID, "Downloads", NotificationManager.IMPORTANCE_LOW)
-                        notificationManager.createNotificationChannel(channel)
-                    }
-
-                    // Use HlsDownloader for HLS content
-                    val mediaItem = MediaItem.fromUri(url)
-                    val cacheDataSourceFactory = CacheDataSource.Factory()
-                        .setCache(cache)
-                        .setCacheWriteDataSinkFactory(CacheDataSink.Factory().setCache(cache))
-                        .setUpstreamDataSourceFactory(upstreamFactory)
-
-                    val downloader = HlsDownloader(mediaItem, cacheDataSourceFactory)
-
-                    // Show initial notification
-                    notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
-
-                    downloader.download { _, _, percent ->
-                        Log.d(TAG, "HLS Download progress: $percent%")
-                        notificationBuilder.setProgress(100, percent.toInt(), false)
-                        var isComplete = false
-                        if (percent >= 100) {
-                            isComplete = true
-                            notificationBuilder.setContentText("Download complete")
-                                .setOngoing(false)
-                                .setProgress(0, 0, false)
-                        }
-                        // Use a coroutine on the Main thread to show the notification
-                        // as notificationManager should be accessed from the main thread.
-                        launch(Dispatchers.Main) {
-                            notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
-                            if (isComplete) {
-                                // Keep the "complete" notification for a few seconds before dismissing
-                                delay(5000)
-                                notificationManager.cancel(NOTIFICATION_ID)
-                            }
-                        }
-                    }
-
-                 } else {
-                     // Use CacheWriter for other content (MP4, etc)
-                     val cacheDataSource = CacheDataSource.Factory()
-                        .setCache(cache)
-                        .setUpstreamDataSourceFactory(upstreamFactory)
-                        .createDataSource()
-                        
-                     val cacheWriter = CacheWriter(
-                        cacheDataSource,
-                        dataSpec,
-                        null // buffer
-                    ) { requestLength, bytesCached, newBytesCached ->
-                        // This part doesn't have a notification implementation yet.
-                        // If needed, it would be similar to the HLS part.
-                        val percentage = if (requestLength == C.LENGTH_UNSET.toLong() || requestLength == 0L) {
-                            -1 // Indeterminate
-                        } else {
-                            ((bytesCached * 100) / requestLength).toInt()
-                        }
-
-                        // It's good practice to log here to see if this branch is ever taken.
-                        if (percentage >= 0) {
-                            Log.d(TAG, "Download progress (non-HLS): $percentage%")
-                        } else if (newBytesCached > 0) {
-                            Log.d(TAG, "Downloaded $bytesCached bytes (total size unknown)")
-                        }
-
-                        // If notifications were needed for non-HLS, you would add the logic here,
-                        // ensuring UI calls like notificationManager.notify are on the main thread.
-                        // For example:
-                        // launch(Dispatchers.Main) { /* update notification */ }
-
-                    }
-                    cacheWriter.cache()
-                }
-
-                Log.d(TAG, "Download complete for $cacheKey")
-            } catch (e: Exception) {
-                Log.e(TAG, "Download failed", e)
-            }
-        }
+        // Hand the already-resolved play-config payload to the download so it
+        // can be replayed offline; re-fetching it at playback time is exactly
+        // what R9 forbids.
+        BunnyOfflineManager.startDownload(
+            context = context,
+            cacheKey = cacheKey,
+            playlistUrl = url,
+            title = currentVideo?.title,
+            video = currentVideo,
+            settings = settings,
+        )
     }
 
     override fun getAudioTrackOptions(): AudioTrackInfoOptions? {

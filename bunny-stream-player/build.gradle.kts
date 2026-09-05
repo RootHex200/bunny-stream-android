@@ -23,7 +23,7 @@ android {
         singleVariant("release")
     }
     namespace = "net.bunny.player"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26
@@ -103,6 +103,12 @@ dependencies {
     implementation("androidx.media3:media3-cast:1.8.0")
     // https://developer.android.com/jetpack/androidx/releases/media3
     implementation("androidx.media3:media3-exoplayer-ima:1.8.0")
+
+    // AndroidX Security — wraps the raw download content key under a
+    // hardware-backed Keystore master key. Needed because media3's cipher data
+    // source takes raw key bytes, which a Keystore-resident AES key cannot give.
+    // https://developer.android.com/jetpack/androidx/releases/security
+    implementation("androidx.security:security-crypto:1.0.0")
 
     // AndroidX Startup
     // https://developer.android.com/jetpack/androidx/releases/startup

@@ -32,7 +32,9 @@ import net.bunny.bunnystreamplayer.model.PlayerIconSet
 import net.bunny.bunnystreamplayer.model.getSanitizedRetentionData
 import net.bunny.bunnystreamplayer.ui.fullscreen.FullScreenPlayerActivity
 import net.bunny.bunnystreamplayer.ui.widget.BunnyPlayerView
-import net.bunny.bunnystreamplayer.util.BunnyCacheManager
+import net.bunny.bunnystreamplayer.download.BunnyOfflineManager
+import net.bunny.bunnystreamplayer.model.toVideoModel
+import net.bunny.bunnystreamplayer.download.BunnyOfflineMetadataStore
 import net.bunny.bunnystreamplayer.util.ScreenshotProtectionUtil
 import net.bunny.player.databinding.ViewBunnyVideoPlayerBinding
 import org.openapitools.client.models.VideoModel
@@ -346,7 +348,7 @@ import org.openapitools.client.models.VideoPlayDataModelVideo
                 } catch (e: Exception) {
                     Log.w(TAG, "Error fetching video/settings: $e")
                     if (cacheKey != null) {
-                         val meta = net.bunny.bunnystreamplayer.util.BunnyCacheManager.loadMetadata(context, cacheKey, VideoModel::class.java, PlayerSettings::class.java)
+                         val meta = BunnyOfflineMetadataStore.load(context, cacheKey, VideoModel::class.java, PlayerSettings::class.java)
                          if (meta != null) {
                              video = meta.first as VideoModel
                              settings = arrow.core.Either.Right(meta.second as PlayerSettings)
@@ -452,7 +454,7 @@ import org.openapitools.client.models.VideoPlayDataModelVideo
                 } catch (e: Exception) {
                      Log.w(TAG, "Error fetching video/settings: $e")
                     if (cacheKey != null) {
-                         val meta = net.bunny.bunnystreamplayer.util.BunnyCacheManager.loadMetadata(context, cacheKey, VideoModel::class.java, PlayerSettings::class.java)
+                         val meta = BunnyOfflineMetadataStore.load(context, cacheKey, VideoModel::class.java, PlayerSettings::class.java)
                          if (meta != null) {
                              video = meta.first as VideoModel
                              settings = arrow.core.Either.Right(meta.second as PlayerSettings)
@@ -626,42 +628,13 @@ import org.openapitools.client.models.VideoPlayDataModelVideo
         }
     }
 
-     @OptIn(UnstableApi::class)
-     override fun isDownloadFileExist(cacheKey: String): Boolean{
-         return BunnyCacheManager.getFileExist(context, cacheKey)
-     }
     override fun downloadCurrentVideo(cacheKey: String) {
         bunnyPlayer.downloadCurrentVideo(cacheKey)
     }
 
-    fun VideoPlayDataModelVideo.toVideoModel(): VideoModel = VideoModel(
-        videoLibraryId = this.videoLibraryId,
-        guid = this.guid,
-        title = this.title,
-        dateUploaded = this.dateUploaded,
-        views = this.views,
-        isPublic = this.isPublic,
-        length = this.length,
-        status = this.status,
-        framerate = this.framerate,
-        rotation = this.rotation,
-        width = this.width,
-        height = this.height,
-        availableResolutions = this.availableResolutions,
-        outputCodecs = this.outputCodecs,
-        thumbnailCount = this.thumbnailCount,
-        encodeProgress = this.encodeProgress,
-        storageSize = this.storageSize,
-        captions = this.captions,
-        hasMP4Fallback = this.hasMP4Fallback,
-        collectionId = this.collectionId,
-        thumbnailFileName = this.thumbnailFileName,
-        averageWatchTime = this.averageWatchTime,
-        totalWatchTime = this.totalWatchTime,
-        category = this.category,
-        chapters = this.chapters,
-        moments = this.moments,
-        metaTags = this.metaTags,
-        transcodingMessages = this.transcodingMessages
-    )
+    @OptIn(UnstableApi::class)
+    override fun isDownloaded(cacheKey: String): Boolean =
+        net.bunny.bunnystreamplayer.download.BunnyOfflineManager
+            .isDownloaded(context, cacheKey)
+
 }

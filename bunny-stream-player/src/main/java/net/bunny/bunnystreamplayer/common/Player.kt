@@ -77,6 +77,11 @@ interface BunnyPlayer {
 
     fun playVideo(playerView: PlayerView, video: VideoModel, retentionData: Map<Int, Int>, playerSettings: PlayerSettings, refererValue: String? = null, cacheKey: String? = null)
 
+    /**
+     * Downloads the currently loaded video for offline playback under
+     * [cacheKey]. The play-config payload already resolved for playback is
+     * captured alongside it, since that endpoint is unreachable offline.
+     */
     fun downloadCurrentVideo(cacheKey: String)
 
     fun skipForward()
