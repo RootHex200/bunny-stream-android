@@ -9,7 +9,10 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavOptions
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.media3.common.util.UnstableApi
 import net.bunny.android.demo.App
+import net.bunny.android.demo.downloads.downloadsScreen
+import net.bunny.android.demo.downloads.navigateToDownloads
 import net.bunny.android.demo.home.HOME_ROUTE
 import net.bunny.android.demo.home.TVHomeScreenRoute
 import net.bunny.android.demo.home.homeScreen
@@ -24,6 +27,7 @@ import net.bunny.android.demo.settings.navigateToSettings
 import net.bunny.android.demo.settings.settingsScreen
 import net.bunny.android.demo.ui.AppState
 
+@UnstableApi
 @Composable
 fun AppNavHost(
     appState: AppState,
@@ -51,6 +55,7 @@ fun AppNavHost(
             },
             navigateToResumeSettings = navController::navigateToResumeSettings,
             navigateToResumeManagement = navController::navigateToResumeManagement,
+            navigateToDownloads = navController::navigateToDownloads,
             modifier = modifier
         )
         libraryScreen(
@@ -64,6 +69,12 @@ fun AppNavHost(
         resumePositionManagementScreen(
             appState = appState,
             onPlayVideo = navController::navigateToPlayer
+        )
+        downloadsScreen(
+            appState = appState,
+            onPlayOffline = { videoId, libraryId, token, expires, cacheKey ->
+                navController.navigateToPlayer(videoId, libraryId, null, token, expires, cacheKey)
+            },
         )
     }
 }

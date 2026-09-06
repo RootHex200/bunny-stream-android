@@ -79,6 +79,11 @@ sealed class HomeOption(
         "Manage Resume Positions",
         textColor = { MaterialTheme.colorScheme.primary }
     )
+
+    object OfflineDownloads : HomeOption(
+        "Offline downloads",
+        textColor = { MaterialTheme.colorScheme.primary }
+    )
 }
 
 @ExperimentalMaterial3Api
@@ -93,6 +98,7 @@ fun HomeScreenRoute(
     navigateToPlayer: (String, Long, String?, Long?, String?) -> Unit,
     navigateToResumeSettings: () -> Unit,
     navigateToResumeManagement: () -> Unit,
+    navigateToDownloads: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showDialog by remember { mutableStateOf(false) }
@@ -127,6 +133,10 @@ fun HomeScreenRoute(
 
                 HomeOption.ResumePositionManagement -> {
                     navigateToResumeManagement()
+                }
+
+                HomeOption.OfflineDownloads -> {
+                    navigateToDownloads()
                 }
             }
         },
@@ -194,7 +204,8 @@ fun OptionsList(
         HomeOption.VideoPlayer,
         HomeOption.VideoUpload,
         HomeOption.CameraUpload,
-        HomeOption.DirectVideoPlay
+        HomeOption.DirectVideoPlay,
+        HomeOption.OfflineDownloads
     )
 
     val resumeItems = listOf(
