@@ -35,6 +35,7 @@ import net.bunny.bunnystreamplayer.ui.widget.BunnyPlayerView
 import net.bunny.bunnystreamplayer.download.BunnyOfflineManager
 import net.bunny.bunnystreamplayer.model.toVideoModel
 import net.bunny.bunnystreamplayer.download.BunnyOfflineMetadataStore
+import net.bunny.bunnystreamplayer.download.BunnyPlayConfigCache
 import net.bunny.bunnystreamplayer.util.ScreenshotProtectionUtil
 import net.bunny.player.databinding.ViewBunnyVideoPlayerBinding
 import org.openapitools.client.models.VideoModel
@@ -75,6 +76,14 @@ import org.openapitools.client.models.VideoPlayDataModelVideo
     private var resumePositionCallback: ((PlaybackPosition, (Boolean) -> Unit) -> Unit)? = null
     private var currentVideoId: String? = null
     private var currentLibraryId: Long? = null
+
+    /**
+     * The token pair the current video was resolved with, kept so a download
+     * started later can be signed identically. Re-deriving it in the app layer
+     * is how a token that plays fine ends up 401-ing the download.
+     */
+    private var currentToken: String? = null
+    private var currentExpires: Long? = null
     private var resumeConfig: ResumeConfig = ResumeConfig()
     private var isPortraitMode: Boolean = false
     private var screenshotProtectionEnabled: Boolean = false
@@ -304,12 +313,38 @@ import org.openapitools.client.models.VideoPlayDataModelVideo
         }
     }
 
+    /**
+     * Turns a failed play-config lookup into something the viewer can act on.
+     *
+     * A 401 from `/play` almost always means the library has Embed View Token
+     * Authentication switched on, so it gets its own wording instead of a
+     * generic "couldn't load".
+     */
+    private fun playbackFailureMessage(failure: Exception?, tokenSupplied: Boolean): String {
+        val detail = "${failure?.message.orEmpty()} ${failure?.cause?.message.orEmpty()}"
+        val unauthorized = detail.contains("401") || detail.contains("Unauthorized", ignoreCase = true)
+
+        return when {
+            unauthorized && tokenSupplied ->
+                "Playback was refused (401). The token or expiry does not match this " +
+                    "video — the token must be SHA256(securityKey + videoId + expires), " +
+                    "and expires must be a future UNIX time in seconds."
+            unauthorized ->
+                "Playback was refused (401). This library requires Embed View Token " +
+                    "Authentication — use playVideoWithToken with a token and expires."
+            failure != null -> "Could not load this video: ${failure.message}"
+            else -> "Could not load this video."
+        }
+    }
+
     override fun playVideo(videoId: String, libraryId: Long?, videoTitle: String, refererValue: String?, isPortrait: Boolean, isScreenshotProtectionEnabled: Boolean, cacheKey: String?) {
 
         Log.d(TAG, "playVideo videoId=$videoId, isPortrait=$isPortrait, isScreenshotProtectionEnabled=$isScreenshotProtectionEnabled")
 
         currentVideoId = videoId
         currentLibraryId = libraryId
+        currentToken = null
+        currentExpires = null
         isPortraitMode = isPortrait
         val providedLibraryId = libraryId ?: BunnyStreamApi.libraryId
         
@@ -335,18 +370,28 @@ import org.openapitools.client.models.VideoPlayDataModelVideo
             scope!!.launch {
                 var video: VideoModel? = null
                 var settings: arrow.core.Either<String, PlayerSettings>? = null
+                var resolveFailure: Exception? = null
 
                 try {
                     video = withContext(Dispatchers.IO) {
                         BunnyStreamApi.getInstance().videosApi.videoGetVideoPlayData(
                             providedLibraryId,
-                            videoId
+                            videoId,
+                            // Explicit nulls, not the generated defaults. Those
+                            // are `token = ""` and `expires = 0`, which put
+                            // `?token=&expires=0` on the wire — a library with
+                            // Embed View Token Authentication on reads that as
+                            // an invalid token and answers 401, where omitting
+                            // the pair at least produces the honest error.
+                            token = null,
+                            expires = null
                         ).video?.toVideoModel()!!
                     }
                     settings = BunnyStreamApi.getInstance()
                         .fetchPlayerSettings(providedLibraryId, videoId, capturedRefererValue)
                 } catch (e: Exception) {
                     Log.w(TAG, "Error fetching video/settings: $e")
+                    resolveFailure = e
                     if (cacheKey != null) {
                          val meta = BunnyOfflineMetadataStore.load(context, cacheKey, VideoModel::class.java, PlayerSettings::class.java)
                          if (meta != null) {
@@ -357,7 +402,28 @@ import org.openapitools.client.models.VideoPlayDataModelVideo
                 }
 
                 if (video == null || settings == null) {
-                     return@launch
+                    // Returning quietly here is how a 401 from a
+                    // token-authenticated library becomes a blank player with
+                    // nothing but a logcat line to explain it.
+                    playerView.showError(
+                        playbackFailureMessage(resolveFailure, tokenSupplied = false)
+                    )
+                    return@launch
+                }
+
+                // Hand the resolved config to any download of this video, so it
+                // reuses the already-authorized playlist instead of re-signing
+                // a fresh /play request.
+                settings!!.getOrNull()?.let { resolved ->
+                    BunnyPlayConfigCache.put(
+                        libraryId = providedLibraryId,
+                        videoId = videoId,
+                        video = video!!,
+                        settings = resolved,
+                        token = null,
+                        expires = null,
+                        referer = capturedRefererValue,
+                    )
                 }
 
                 settings!!.fold(
@@ -412,8 +478,15 @@ import org.openapitools.client.models.VideoPlayDataModelVideo
 
         Log.d(TAG, "playVideoWithToken videoId=$videoId, token=$token, expires=$expires refervalue=${refererValue}, isPortrait=$isPortrait, isScreenshotProtectionEnabled=$isScreenshotProtectionEnabled")
 
+        // A blank token is not a token. Sent as `?token=`, it reads to Bunny as
+        // a failed signature check rather than an unauthenticated request.
+        @Suppress("NAME_SHADOWING") val token = token?.takeIf { it.isNotBlank() }
+        @Suppress("NAME_SHADOWING") val expires = expires?.takeIf { it > 0L }
+
         currentVideoId = videoId
         currentLibraryId = libraryId
+        currentToken = token
+        currentExpires = expires
         isPortraitMode = isPortrait
         val providedLibraryId = libraryId ?: BunnyStreamApi.libraryId
         
@@ -439,6 +512,7 @@ import org.openapitools.client.models.VideoPlayDataModelVideo
             scope!!.launch {
                 var video: VideoModel? = null
                 var settings: arrow.core.Either<String, PlayerSettings>? = null
+                var resolveFailure: Exception? = null
 
                 try {
                     video = withContext(Dispatchers.IO) {
@@ -453,6 +527,7 @@ import org.openapitools.client.models.VideoPlayDataModelVideo
                         .fetchPlayerSettingsWithToken(providedLibraryId, videoId, token, expires, capturedRefererValue)
                 } catch (e: Exception) {
                      Log.w(TAG, "Error fetching video/settings: $e")
+                    resolveFailure = e
                     if (cacheKey != null) {
                          val meta = BunnyOfflineMetadataStore.load(context, cacheKey, VideoModel::class.java, PlayerSettings::class.java)
                          if (meta != null) {
@@ -463,7 +538,25 @@ import org.openapitools.client.models.VideoPlayDataModelVideo
                 }
 
                 if (video == null || settings == null) {
-                     return@launch
+                    playerView.showError(
+                        playbackFailureMessage(resolveFailure, tokenSupplied = !token.isNullOrBlank())
+                    )
+                    return@launch
+                }
+
+                // Same hand-off as playVideo, and the pair travels with it:
+                // a download that must re-resolve gets the token that just
+                // worked rather than one the app layer mints again.
+                settings!!.getOrNull()?.let { resolved ->
+                    BunnyPlayConfigCache.put(
+                        libraryId = providedLibraryId,
+                        videoId = videoId,
+                        video = video!!,
+                        settings = resolved,
+                        token = token,
+                        expires = expires,
+                        referer = capturedRefererValue,
+                    )
                 }
 
                 settings!!.fold(
@@ -626,6 +719,23 @@ import org.openapitools.client.models.VideoPlayDataModelVideo
         } else {
             String.format("%d:%02d", minutes, seconds)
         }
+    }
+
+    /**
+     * The `token`/`expires` pair the current video is playing under, or null
+     * when it was resolved without token auth.
+     *
+     * Pass this straight to [net.bunny.bunnystreamplayer.download.BunnyOfflineManager.startDownload]
+     * rather than minting a second token in the app layer — the token is a
+     * signature over `securityKey + videoId + expires`, so a pair that differs
+     * in either half is refused with a 401 even though playback is working.
+     * For the video that is already playing, prefer [downloadCurrentVideo],
+     * which reuses the resolved playlist and asks Bunny nothing at all.
+     */
+    fun currentPlaybackToken(): Pair<String, Long>? {
+        val token = currentToken?.takeIf { it.isNotBlank() } ?: return null
+        val expires = currentExpires?.takeIf { it > 0L } ?: return null
+        return token to expires
     }
 
     override fun downloadCurrentVideo(cacheKey: String) {

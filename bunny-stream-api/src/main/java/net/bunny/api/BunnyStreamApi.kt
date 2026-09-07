@@ -1,6 +1,7 @@
 package net.bunny.api
 
 import android.content.Context
+import android.util.Log
 import arrow.core.Either
 import kotlinx.coroutines.Dispatchers
 import net.bunny.api.api.ManageCollectionsApi
@@ -22,6 +23,8 @@ class BunnyStreamApi private constructor(
 ) : StreamApi {
 
     companion object {
+        private const val TAG = "BunnyStreamApi"
+
         private const val TUS_PREFS_FILE = "tusPrefs"
 
         const val baseApi = BuildConfig.BASE_API
@@ -42,9 +45,13 @@ class BunnyStreamApi private constructor(
             )
 
             this.libraryId = libraryId
-            accessKey?.let {
+            accessKey?.takeIf { it.isNotBlank() }?.let {
                 ApiClient.apiKey["AccessKey"] = it
-            }
+            } ?: Log.w(
+                TAG,
+                "Initialized without an AccessKey. Management endpoints will be " +
+                    "unauthenticated; token-authenticated playback still works.",
+            )
         }
 
         fun getInstance(): StreamApi {
@@ -92,7 +99,8 @@ class BunnyStreamApi private constructor(
     )
     override val progressRepository = DefaultProgressRepository(
         httpClient = ktorClient,
-        coroutineDispatcher = Dispatchers.IO
+        coroutineDispatcher = Dispatchers.IO,
+        accessKey = accessKey,
     )
     private val tusVideoUploaderService = TusUploaderService(
         preferences = prefs,

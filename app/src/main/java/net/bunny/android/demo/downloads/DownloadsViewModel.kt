@@ -171,8 +171,9 @@ class DownloadsViewModel : ViewModel() {
 internal fun BunnyDownloadError?.label(): String = when (this) {
     BunnyDownloadError.NETWORK -> "network"
     BunnyDownloadError.STORAGE_FULL -> "storage full"
-    // The manager refuses DRM videos outright, and this is how that surfaces.
-    BunnyDownloadError.UNAUTHORIZED -> "unauthorized — is DRM enabled on the library?"
+    // Covers both a rejected AccessKey/token and the manager's outright
+    // refusal of a DRM-protected video; the log line says which.
+    BunnyDownloadError.UNAUTHORIZED -> "unauthorized — check AccessKey/token, or DRM on the library"
     BunnyDownloadError.NOT_FOUND -> "not found"
     BunnyDownloadError.UNKNOWN, null -> "unknown"
 }

@@ -58,7 +58,12 @@ class PlayerViewModel : ViewModel() {
                 val response =
                     BunnyStreamApi.getInstance().videosApi.videoGetVideoPlayData(
                         providedLibraryId,
-                        videoId
+                        videoId,
+                        // See BunnyStreamPlayer.playVideo: the generated
+                        // defaults send `?token=&expires=0`, which a
+                        // token-authenticated library rejects outright.
+                        token = null,
+                        expires = null
                     ).video?.toVideoModel()!!
                 // Load saved progress
                 val progressResult = BunnyStreamApi.getInstance().progressRepository

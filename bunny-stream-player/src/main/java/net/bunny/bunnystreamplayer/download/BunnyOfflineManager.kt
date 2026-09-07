@@ -71,8 +71,15 @@ object BunnyOfflineManager {
         title: String?,
         video: Any?,
         settings: Any?,
+        referer: String? = null,
     ) {
         ensureListener(context)
+
+        // The CDN sees the download exactly as it sees playback. A library
+        // with "Block direct URL access" enabled rejects a request whose
+        // Referer is not on its allow-list, which is how a video that streams
+        // fine still fails to download.
+        BunnyDownloadManagerProvider.setReferer(referer)
 
         if (video != null && settings != null) {
             BunnyOfflineMetadataStore.save(context, cacheKey, video, settings)
@@ -114,19 +121,64 @@ object BunnyOfflineManager {
         title: String?,
         onResult: (Boolean, BunnyDownloadError?) -> Unit,
     ) {
+        // A video the player just resolved needs no second /play call: the
+        // response it already holds carries an authorized playlist URL. Taking
+        // it skips the re-signing step entirely, which is the whole reason a
+        // playing video could still fail to download.
+        val cached = BunnyPlayConfigCache.get(libraryId, videoId)
+        if (cached != null && cached.settings.videoUrl.isNotEmpty()) {
+            if (cached.settings.drmEnabled) {
+                Log.w(TAG, "Refusing download of DRM-protected video $videoId")
+                onResult(false, BunnyDownloadError.UNAUTHORIZED)
+                return
+            }
+            Log.d(TAG, "Reusing the play config the player resolved for $videoId")
+            startDownload(
+                context = context,
+                cacheKey = cacheKey,
+                playlistUrl = cached.settings.videoUrl,
+                title = title ?: cached.video.title,
+                video = cached.video,
+                settings = cached.settings,
+                referer = referer ?: cached.referer,
+            )
+            onResult(true, null)
+            return
+        }
+
+        // Nothing reusable, so this one has to be signed after all. A config
+        // cached without a playlist URL still remembers the pair that resolved
+        // it, which beats treating the video as unauthenticated.
+        val effectiveToken = token ?: cached?.token
+        val effectiveExpires = expires ?: cached?.expires
+
+        // The token is a signature over (securityKey + videoId + expires), so
+        // it only validates when both halves travel together and still match
+        // the video being asked for. Half a pair reaches Bunny as a failed
+        // signature check, which is why the very token that is playing right
+        // now can come back 401 here.
+        val auth = normalizeTokenAuth(videoId, effectiveToken, effectiveExpires)
+        if (auth is TokenAuth.Invalid) {
+            Log.w(TAG, "Refusing download of $videoId: ${auth.reason}")
+            onResult(false, BunnyDownloadError.UNAUTHORIZED)
+            return
+        }
+        val authToken = (auth as? TokenAuth.Signed)?.token
+        val authExpires = (auth as? TokenAuth.Signed)?.expires
+
         scope.launch {
             try {
                 val video: VideoModel? = withContext(Dispatchers.IO) {
                     BunnyStreamApi.getInstance().videosApi.videoGetVideoPlayData(
                         libraryId,
                         videoId,
-                        token = token,
-                        expires = expires,
+                        token = authToken,
+                        expires = authExpires,
                     ).video?.toVideoModel()
                 }
                 val settings = BunnyStreamApi.getInstance()
                     .fetchPlayerSettingsWithToken(
-                        libraryId, videoId, token, expires, referer,
+                        libraryId, videoId, authToken, authExpires, referer,
                     ).getOrNull()
 
                 val url = settings?.videoUrl
@@ -151,10 +203,24 @@ object BunnyOfflineManager {
                     title = title ?: video.title,
                     video = video,
                     settings = settings,
+                    referer = referer,
                 )
                 onResult(true, null)
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to resolve play config for $videoId", e)
+                if (classify(e) == BunnyDownloadError.UNAUTHORIZED) {
+                    Log.w(
+                        TAG,
+                        "Play config for $videoId in library $libraryId was refused. " +
+                            "token=${authToken.orEmpty().take(8).ifEmpty { "<none>" }}… " +
+                            "expires=${authExpires ?: "<none>"}. A token that plays but " +
+                            "will not download is almost always signed for a different " +
+                            "videoId/expires than the one sent here, or signed with a " +
+                            "different library's security key.",
+                        e,
+                    )
+                } else {
+                    Log.w(TAG, "Failed to resolve play config for $videoId", e)
+                }
                 onResult(false, classify(e))
             }
         }
@@ -188,6 +254,9 @@ object BunnyOfflineManager {
         )
         BunnyOfflineMetadataStore.deleteAll(context)
         BunnyDownloadStore.deleteAll(context)
+        // Holding a signed playlist URL past logout would let the next user
+        // start a download against the previous session's authorization.
+        BunnyPlayConfigCache.clear()
     }
 
     /** Every completed download the store is holding. */
@@ -302,6 +371,81 @@ object BunnyOfflineManager {
                 null
             },
         )
+    }
+
+    /** Outcome of checking a caller-supplied `token`/`expires` pair. */
+    private sealed interface TokenAuth {
+        /** No token auth requested; the library had better not require it. */
+        data object None : TokenAuth
+
+        data class Signed(val token: String, val expires: Long) : TokenAuth
+
+        data class Invalid(val reason: String) : TokenAuth
+    }
+
+    /**
+     * Anything past this is a millisecond timestamp: as seconds it lands in
+     * the year 5138, which nobody is signing a lesson for.
+     */
+    private const val MILLIS_THRESHOLD = 100_000_000_000L
+
+    /**
+     * Checks the token pair before spending a round trip on it.
+     *
+     * Bunny answers 401 for every malformed variant — no expires, a
+     * millisecond expires, an elapsed expires — so without this the caller
+     * gets one indistinguishable failure for four different mistakes.
+     */
+    private fun normalizeTokenAuth(
+        videoId: String,
+        token: String?,
+        expires: Long?,
+        nowSeconds: Long = System.currentTimeMillis() / 1000L,
+    ): TokenAuth {
+        val cleanToken = token?.trim()?.takeIf { it.isNotEmpty() }
+        val rawExpires = expires?.takeIf { it > 0L }
+
+        if (cleanToken == null) {
+            return if (rawExpires == null) {
+                TokenAuth.None
+            } else {
+                TokenAuth.Invalid(
+                    "expires=$rawExpires was supplied without a token; Bunny validates " +
+                        "the pair together and refuses half of it",
+                )
+            }
+        }
+
+        if (rawExpires == null) {
+            return TokenAuth.Invalid(
+                "a token was supplied without expires. The token is " +
+                    "SHA256(securityKey + videoId + expires), so Bunny cannot check it " +
+                    "without the same expires it was signed with",
+            )
+        }
+
+        // A caller that passed System.currentTimeMillis() straight through is
+        // making a fixable mistake, not an unrecoverable one.
+        val expiresSeconds = if (rawExpires >= MILLIS_THRESHOLD) {
+            Log.w(
+                TAG,
+                "expires=$rawExpires for $videoId looks like milliseconds; Bunny wants " +
+                    "seconds. Using ${rawExpires / 1000}.",
+            )
+            rawExpires / 1000
+        } else {
+            rawExpires
+        }
+
+        if (expiresSeconds <= nowSeconds) {
+            return TokenAuth.Invalid(
+                "the token expired at $expiresSeconds (now $nowSeconds). Downloads are " +
+                    "started long after playback began, so a token minted for playback " +
+                    "has often lapsed by the time the download runs — sign a fresh one",
+            )
+        }
+
+        return TokenAuth.Signed(cleanToken, expiresSeconds)
     }
 
     /**

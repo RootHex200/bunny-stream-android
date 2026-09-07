@@ -119,6 +119,13 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
 
     private var currentVideo: VideoModel? = null
     private var currentVideoId: String? = null
+
+    /**
+     * The Referer the current video was resolved and streamed with. Remembered
+     * so a download of that same video presents the identical origin to the
+     * CDN — see [downloadCurrentVideo].
+     */
+    private var currentRefererValue: String? = null
     private var selectedSubtitle: SubtitleInfo? = null
     private var subtitlesEnabled = false
 
@@ -474,6 +481,7 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
 
         // Use provided referer value or fall back to default
         val finalRefererValue = refererValue ?: "https://iframe.mediadelivery.net/"
+        currentRefererValue = finalRefererValue
 
         this.playerSettings = playerSettings
         currentVideo = video
@@ -864,6 +872,10 @@ class DefaultBunnyPlayer private constructor(private val appContext: Context) : 
             title = currentVideo?.title,
             video = currentVideo,
             settings = settings,
+            // Without this the download requests the very same playlist with
+            // no Referer, and a library with "Block direct URL access" on
+            // answers 403 to a video that is playing fine right now.
+            referer = currentRefererValue,
         )
     }
 

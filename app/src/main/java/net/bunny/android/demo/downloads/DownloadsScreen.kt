@@ -210,7 +210,7 @@ private fun StartDownloadCard(
             OutlinedTextField(
                 value = state.referer,
                 onValueChange = onReferer,
-                label = { Text("Referer (optional)") },
+                label = { Text("Referer (blank = https://iframe.mediadelivery.net/)") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )

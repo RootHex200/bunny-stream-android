@@ -220,7 +220,14 @@ open class BunnyTVPlayerActivity : AppCompatActivity() {
                     // Your existing load logic
                     val videoPlayData = withContext(Dispatchers.IO) {
                         BunnyStreamApi.getInstance().videosApi.videoGetVideoPlayData(
-                            libraryId, videoId
+                            libraryId,
+                            videoId,
+                            // The generated defaults would send
+                            // `?token=&expires=0`, which reads as a bad token
+                            // rather than no token under Embed View Token
+                            // Authentication.
+                            token = null,
+                            expires = null
                         )
                     }
 

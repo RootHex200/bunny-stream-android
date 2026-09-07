@@ -56,7 +56,10 @@ fun initHttpClient(accessKey: String?): HttpClient {
     }
 
     client.plugin(HttpSend).intercept { request ->
-        accessKey?.let { request.header("AccessKey", it) }
+        // Blank is not the same as absent: sending `AccessKey:` with no value
+        // reads as an invalid key rather than an unauthenticated request, and
+        // turns what should be a clear 401 into a confusing 404.
+        accessKey?.takeIf { it.isNotBlank() }?.let { request.header("AccessKey", it) }
 
         execute(request)
     }
